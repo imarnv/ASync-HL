@@ -1,152 +1,97 @@
-<a name="readme-top"></a>
+# ASync — Advanced AI Data Analyst Workspace
 
-<div align="center">
+**ASync** is a premium, high-performance, stateless data analytics workspace. It enables users to connect business documents (Excel spreadsheets, CSVs, PDFs), visualize custom KPI graphs on an interactive canvas, run machine learning algorithms, and ask questions about their datasets using state-of-the-art LLMs (Gemini, GPT, Claude).
 
-# MindsHub 
+---
 
-**The unified workspace where open-source models get things done for you.**
+## 🚀 Key Features
 
-_Make AI do actual work. Swap the model anytime — keep everything you've built._
+* **Instant Document Parser**: Upload CSV, XLSX, XLS, and PDF files. The backend extracts structural columns, numbers, and text in milliseconds.
+* **Playground Canvas**: Build dynamic visual widget dashboards (Line, Bar, Area, and Pie charts) and KPI summaries (Sum, Mean, Count) on a clean, responsive layout.
+* **ML Studio**: Execute core machine learning models—specifically **linear regression** (slope, intercept, $R^2$ trendlines) and **K-Means clustering** (centroid mapping and group assignments) on custom data axes.
+* **Excel Chat**: Talk to your files using Google Gemini, OpenAI GPT, or Anthropic Claude. The system bundles the dataset preview directly into the context window for natural language queries.
+* **Analytical Reports**: Generate export-ready profiling summaries of connected attributes, values, and notes, with print-optimized CSS for PDF export.
 
-[![Release](https://img.shields.io/github/v/release/mindsdb/minds?logo=github&label=release)](https://github.com/mindsdb/minds/releases)
-[![Stars](https://img.shields.io/github/stars/mindsdb/minds?logo=github)](https://github.com/mindsdb/minds/stargazers)
-[![License: MIT](https://img.shields.io/github/license/mindsdb/minds)](#-license)
-[![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%20–%203.13-brightgreen.svg)](https://www.python.org/downloads/)
+---
 
-[Website](https://mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme) ·
-[Docs](https://docs.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme) ·
-[Web app](https://console.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme) ·
-[Pricing](https://mindshub.ai/pricing?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme) ·
-[Discord](https://mindshub.ai/discord)
+## 🛠️ System Architecture
 
-<p align="center">
-  <sub>Read this in: <a href="README.zh.md">中文</a> · <a href="README.es.md">Español</a> · <a href="README.pt.md">Português</a> · <a href="README.hi.md">हिन्दी</a></sub>
-</p>
+ASync uses a lightweight, decoupled web architecture:
 
-</div>
+```mermaid
+graph TD
+    subgraph Frontend [Next.js App - Port 3000]
+        UI[Workspace UI]
+        PC[Playground Canvas]
+        MS[ML Studio Visualizer]
+        EC[Excel Chat UI]
+    end
 
-<p align="center">
-  <img width="640" height="480" alt="cowork" src="https://github.com/user-attachments/assets/048761b8-aa77-4506-9c4d-32e2fdecbb60" />
+    subgraph Backend [FastAPI Server - Port 8000]
+        API[API Router]
+        UP[File Upload & Pandas Parser]
+        ML[NumPy ML Engine]
+        LLM[LLM Route Client]
+    end
 
-
-
-</p>
-
-**MindsHub Cowork** is the unified workspace where you delegate entire projects — apps, websites, research, analysis, reporting, scheduled operations — and collect finished, shareable results. Connect your data, route work to any model (open or proprietary), run open-source agents, and turn their output into web applications you can publish. It's open source and runs anywhere — your machine, your VPC, or the hosted app.
-
-This repository is the **platform superproject**: it pulls together the desktop/web app, the agent backend, and the data engine so you can build and run the whole stack from source.
-
-## Get started
-
-Pick whichever fits:
-
-- **Web — nothing to install.** Open **[console.mindshub.ai](https://console.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme)** and sign in.
-- **macOS.** [Download the desktop app](https://downloads.mindsdb.com/mindshub-cowork/mac/mindshub-cowork-latest.pkg) (`.pkg`).
-- **Windows.** [Download the desktop app](https://downloads.mindsdb.com/mindshub-cowork/windows/mindshub-cowork-latest.exe) (`.exe`).
-- **Linux.** [Build from source](#build-from-source).
-
-Free to start. Pro adds all frontier models and private artifacts — see [pricing](https://mindshub.ai/pricing?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme).
-
-## What you can do
-
-For every knowledge worker — creators, strategists, and operators:
-
-- **Automate** repetitive, multi-step work that involves reading and writing: reports, monitoring, recurring workflows, and scheduled operations.
-- **Build** internal AI tools and artifacts — apps, dashboards, decks, docs, analyses — without engineering, and publish them to a live URL to share with your team.
-
-## What's inside
-
-- **Connected data.** A secure vault links systems like BigQuery, Postgres, Gmail, Drive, HubSpot, Notion, and Linear. Credentials stay scoped per connection — agents never see raw keys.
-- **Model Router.** Switch between frontier models (Claude, GPT, Gemini) and open models (DeepSeek, Qwen, Kimi) without wiring up a key for each provider.
-- **Open agents.** Run interchangeable open-source harnesses — Anton (default) and Hermes — swappable from a dropdown.
-- **Artifacts.** Turn agent output into documents, dashboards, apps, and code, and publish to a live URL.
-- **Memory, skills & scheduling.** Cross-session memory, a reusable skill library, and tasks that run on a schedule.
-
-## Build from source
-
-**1. Clone the repository**
-
-```bash
-git clone --recurse-submodules https://github.com/mindsdb/minds.git
-cd minds
+    UI -->|File Upload / api-upload| UP
+    UI -->|ML Requests / api-ml| ML
+    EC -->|Chat Prompts / api-chat| LLM
+    LLM -->|External Call| Gemini[Google Gemini API]
+    LLM -->|External Call| GPT[OpenAI GPT API]
+    LLM -->|External Call| Claude[Anthropic Claude API]
 ```
 
-**2. Install dependencies**
+* **Frontend**: Built using Next.js, React, ChartJS, TailwindCSS, and Axios. Source files are located in [frontend/src/app](file:///Users/arnavmehta/Desktop/ASync/frontend/src/app) and [frontend/src/components](file:///Users/arnavmehta/Desktop/ASync/frontend/src/components).
+* **Backend**: A standalone, stateless FastAPI server driven by Pandas, NumPy, and PDFPlumber. Source code is located in [backend/app.py](file:///Users/arnavmehta/Desktop/ASync/backend/app.py).
 
+---
+
+## 📈 Current Progress & Project Status
+
+### Completed Integrations
+* **100% Frontend Implementation**: Home page, interactive sidebar navigation, drag-and-drop file uploaders, canvas dashboard widget configuration, chat thread bubbles, and scatter plot matrices are completely built.
+* **100% API Coverage**: The backend script [app.py](file:///Users/arnavmehta/Desktop/ASync/backend/app.py) successfully exposes all 4 critical endpoints required by the Next.js frontend:
+  * `POST /api/upload` (Extracts tabular data or PDF text)
+  * `POST /api/chat` (Forwards prompts to Gemini, Claude, or GPT)
+  * `POST /api/ml/regression` (Linear regression math)
+  * `POST /api/ml/kmeans` (Clustering algorithm)
+
+### Ongoing Improvements & Gaps
+* **Datetime/Timestamp Formatting**: Handling date/time values parsed from Excel so that they serialize to JSON properly.
+* **xls Legacy Format Support**: Adding `xlrd` to backend dependencies for old spreadsheet compatibility.
+
+---
+
+## ⚙️ Running Locally
+
+Follow these instructions to spin up the local development environment:
+
+### 1. Start the FastAPI Backend
+Ensure Python 3.10+ is installed on your machine.
 ```bash
-make setup
+cd backend
+pip install -r requirements.txt
+python app.py
 ```
+*The API will start running at `http://127.0.0.1:8000`.*
 
-**3. Run**
-
-| Mode | Command |
-|---|---|
-| Desktop app (Electron) with hot reload | `make dev` or `make watch` |
-| Web app in browser with hot reload | `make dev-web` |
-| Production build | `make build` |
-| Package for macOS | `make dist-mac` |
-| Package for Windows | `make dist-win` |
-| Build macOS `.app` from local uncommitted source | `make pack-local` |
-| Wipe all local installs + data (fresh start) | `make flush` |
-
-> **Fresh start:** `make flush` removes the local runtime (the `cowork-server` uv tool and the `backend/*/.venv`s) and deletes app state in `~/.anton` (provider keys) and `~/.cowork` (database, hermes, projects). Use it to test the from-scratch install flow or recover from a broken install. It prompts for confirmation — pass `FORCE=1` to skip. The next `make setup` or app launch reinstalls everything. ⚠️ This deletes your conversations and saved keys.
-
-### Working on feature branches (submodules)
-
-This repo is a superproject that pins each module (`frontend`, `backend/core_api`, `backend/core_agent`, `backend/data-vault`) to a commit. To work on module branches without polluting `git status` or fighting over pins:
-
-**1. Pick your branches** in a gitignored `dev.env` (copy the template):
-
+### 2. Start the Next.js Frontend
+Ensure Node.js 18+ is installed on your machine.
 ```bash
-cp dev.env.example dev.env      # then set REF=feat/my-thing (or per-module API_REF=…)
+cd frontend
+npm install
+npm run dev
 ```
+*The interface will start running at `http://localhost:3000`.*
 
-**2. `make` follows it** — one knob, both run paths:
+---
 
-| Command | What it does |
-|---|---|
-| `make use` | check out your `dev.env` refs across all submodules |
-| `make dev` / `make watch` | run the Electron app with live reload against local source |
-| `make dev-web` | run the web SPA with live reload against local source |
-| `make server` + `make app` | (re)install the desktop server from the configured branch, then launch |
-| `make server-local` + `make app-local` | install the desktop server from **local uncommitted source**, then launch |
-| `make pack-local` | build the macOS `.app` from local uncommitted source (no push needed) |
-| `make refs` | show which refs the next run will use |
-| `make baseline` | reset submodules to the pinned commits |
-| `make pin` | record the current submodule commits as the superproject's pins (one deliberate commit) |
+## 🔑 Credentials Configuration
 
-Submodules are configured with `ignore = all`, so your branch work never shows up as superproject changes — the parent `git status` stays clean. Pins move **only** via `make pin`. See [`CLAUDE.md`](CLAUDE.md) for the full workflow.
-
-## Deploy anywhere
-
-Cowork is built for flexible deployment — **cloud, VPC, on-prem, air-gapped, and hybrid** infrastructure — so you keep full control over your infrastructure, models, permissions, and data.
-
-## Help & support
-
-- **Ask a question** — join the [Discord community](https://mindshub.ai/discord).
-- **Report a bug** — open a [GitHub issue](https://github.com/mindsdb/minds/issues) with reproduction steps.
-- **Read the docs** — guides, setup, and the API at [docs.mindshub.ai](https://docs.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme).
-- **Enterprise SLAs or custom deployments** — [contact the team](https://mindshub.ai/contact?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme).
-
-## 🤝 Contribute
-
-Cowork is open source and contributions are welcome — code, integrations, docs, bug reports, and feature ideas. Read the [docs](https://docs.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme) to get set up, browse [open issues](https://github.com/mindsdb/minds/issues), and say hi on [Discord](https://mindshub.ai/discord).
-
-## 🔒 Security
-
-Found a security vulnerability? Please **don't** open a public issue. Report it privately through our [security policy](https://github.com/mindsdb/minds/security).
-
-## 📚 Resources
-
-- [Documentation](https://docs.mindshub.ai/?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme)
-- [Blog](https://mindshub.ai/blog?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme)
-- [Brand guidelines & press kit](https://mindshub.ai/press-kit?utm_source=github&utm_medium=repo-readme&utm_campaign=minds-readme)
-- [Discord community](https://mindshub.ai/discord)
-
-## 📄 License
-
-This repository is released under the [MIT License](LICENSE). Bundled components are governed by their own licenses — see each submodule's repository for details.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-# ASync-HL
+API keys can be supplied in two ways:
+1. **Frontend (Recommended)**: Click **API Credentials** in the sidebar to save keys (`localStorage`) locally in your browser. They will be passed to the backend per request.
+2. **Backend Environment**: Set variables on your backend environment:
+   * `GEMINI_API_KEY`
+   * `OPENAI_API_KEY`
+   * `ANTHROPIC_API_KEY`
