@@ -19,27 +19,71 @@
 ASync uses a lightweight, decoupled web architecture:
 
 ```mermaid
-graph TD
-    subgraph Frontend [Next.js App - Port 3000]
-        UI[Workspace UI]
-        PC[Playground Canvas]
-        MS[ML Studio Visualizer]
-        EC[Excel Chat UI]
+flowchart TB
+    %% Nodes styling
+    classDef frontend fill:#faf6f0,stroke:#ac7d58,stroke-width:2px,color:#1b1b1b;
+    classDef backend fill:#f3f4f6,stroke:#4b5563,stroke-width:2px,color:#1b1b1b;
+    classDef client fill:#ffffff,stroke:#1b1b1b,stroke-width:1px,stroke-dasharray: 5 5,color:#1b1b1b;
+    classDef ext fill:#fef2f2,stroke:#ef4444,stroke-width:1px,color:#1b1b1b;
+
+    %% Subgraphs
+    subgraph Frontend_App ["Next.js Workspace Application (Port 3000)"]
+        direction TB
+        PageState["State Manager (page.tsx)<br/>- activeTab<br/>- activeDataset (headers, rows, type)"]
+        
+        subgraph Views ["Workspace Tabs"]
+            HomeTab["Home Tab<br/>- Onboarding Portal<br/>- Stats dashboard"]
+            DataTab["Data Sources Tab<br/>- Drag-and-Drop file uploader<br/>- Preview data grid"]
+            PlaygroundTab["Playground Canvas Tab<br/>- Drag & configure KPI widgets<br/>- Sum/Mean/Count calculations<br/>- Line/Bar/Pie/Area ChartJS renders"]
+            ChatTab["Excel Chat Tab<br/>- AI Model & API Key selector<br/>- Dataset Context assembler<br/>- Chat message history thread"]
+            MLTab["ML Studio Tab<br/>- Axis selector (numeric)<br/>- Regression / K-Means controls<br/>- Scatter plot visualization"]
+            ReportsTab["Reports Tab<br/>- Interactive Data Profile dictionary<br/>- Print/PDF output styles"]
+        end
     end
 
-    subgraph Backend [FastAPI Server - Port 8000]
-        API[API Router]
-        UP[File Upload & Pandas Parser]
-        ML[NumPy ML Engine]
-        LLM[LLM Route Client]
+    subgraph Backend_App ["FastAPI Server (Port 8000)"]
+        direction TB
+        UploadAPI["/api/upload Handler<br/>- CSV / Excel Pandas parser<br/>- PDF PDFPlumber parser"]
+        ChatAPI["/api/chat Handler<br/>- Context template injector<br/>- Async LLM client routing"]
+        MLRegression["/api/ml/regression Handler<br/>- NumPy slope, intercept, R2<br/>- Trendline coordinates generator"]
+        MLKmeans["/api/ml/kmeans Handler<br/>- Iterative centroid correction<br/>- Cluster assignment generator"]
     end
 
-    UI -->|File Upload / api-upload| UP
-    UI -->|ML Requests / api-ml| ML
-    EC -->|Chat Prompts / api-chat| LLM
-    LLM -->|External Call| Gemini[Google Gemini API]
-    LLM -->|External Call| GPT[OpenAI GPT API]
-    LLM -->|External Call| Claude[Anthropic Claude API]
+    subgraph API_Providers ["External LLM APIs"]
+        GeminiAPI["Google Gemini v1beta"]
+        OpenaiAPI["OpenAI GPT API"]
+        AnthropicAPI["Anthropic Claude API"]
+    end
+
+    %% Apply CSS classes
+    class PageState,HomeTab,DataTab,PlaygroundTab,ChatTab,MLTab,ReportsTab frontend;
+    class UploadAPI,ChatAPI,MLRegression,MLKmeans backend;
+    class GeminiAPI,OpenaiAPI,AnthropicAPI ext;
+
+    %% Connections
+    DataTab -->|1. CSV/XLSX/PDF file upload| UploadAPI
+    UploadAPI -->|2. JSON (headers, rows, file_type)| PageState
+    
+    PageState -.->|Passes activeDataset| PlaygroundTab
+    PageState -.->|Passes activeDataset| ChatTab
+    PageState -.->|Passes activeDataset| MLTab
+    PageState -.->|Passes activeDataset| ReportsTab
+
+    PlaygroundTab -->|Compute math locally| PlaygroundTab
+    ReportsTab -->|window.print()| PDF[PDF Report file]
+
+    ChatTab -->|3. JSON query, api_key, context| ChatAPI
+    ChatAPI --> GeminiAPI
+    ChatAPI --> OpenaiAPI
+    ChatAPI --> AnthropicAPI
+    GeminiAPI & OpenaiAPI & AnthropicAPI -->|4. Markdown response text| ChatAPI
+    ChatAPI -->|5. ChatResponse JSON| ChatTab
+
+    MLTab -->|3. JSON data coordinates| MLRegression
+    MLRegression -->|4. RegressionResponse slope, intercept, R2, trendline| MLTab
+    
+    MLTab -->|3. JSON coordinate points, group count k| MLKmeans
+    MLKmeans -->|4. KMeansResponse assignments, centroids| MLTab
 ```
 
 * **Frontend**: Built using Next.js, React, ChartJS, TailwindCSS, and Axios. Source files are located in [frontend/src/app](file:///Users/arnavmehta/Desktop/ASync/frontend/src/app) and [frontend/src/components](file:///Users/arnavmehta/Desktop/ASync/frontend/src/components).
