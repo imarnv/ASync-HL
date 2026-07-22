@@ -61,29 +61,29 @@ flowchart TB
     class GeminiAPI,OpenaiAPI,AnthropicAPI ext;
 
     %% Connections
-    DataTab -->|1. CSV/XLSX/PDF file upload| UploadAPI
-    UploadAPI -->|2. JSON (headers, rows, file_type)| PageState
+    DataTab -->|"1. CSV/XLSX/PDF file upload"| UploadAPI
+    UploadAPI -->|"2. JSON (headers, rows, file_type)"| PageState
     
-    PageState -.->|Passes activeDataset| PlaygroundTab
-    PageState -.->|Passes activeDataset| ChatTab
-    PageState -.->|Passes activeDataset| MLTab
-    PageState -.->|Passes activeDataset| ReportsTab
+    PageState -.->|"Passes activeDataset"| PlaygroundTab
+    PageState -.->|"Passes activeDataset"| ChatTab
+    PageState -.->|"Passes activeDataset"| MLTab
+    PageState -.->|"Passes activeDataset"| ReportsTab
 
-    PlaygroundTab -->|Compute math locally| PlaygroundTab
-    ReportsTab -->|window.print()| PDF[PDF Report file]
+    PlaygroundTab -->|"Compute math locally"| PlaygroundTab
+    ReportsTab -->|"window.print()"| PDF[PDF Report file]
 
-    ChatTab -->|3. JSON query, api_key, context| ChatAPI
+    ChatTab -->|"3. JSON query, api_key, context"| ChatAPI
     ChatAPI --> GeminiAPI
     ChatAPI --> OpenaiAPI
     ChatAPI --> AnthropicAPI
-    GeminiAPI & OpenaiAPI & AnthropicAPI -->|4. Markdown response text| ChatAPI
-    ChatAPI -->|5. ChatResponse JSON| ChatTab
+    GeminiAPI & OpenaiAPI & AnthropicAPI -->|"4. Markdown response text"| ChatAPI
+    ChatAPI -->|"5. ChatResponse JSON"| ChatTab
 
-    MLTab -->|3. JSON data coordinates| MLRegression
-    MLRegression -->|4. RegressionResponse slope, intercept, R2, trendline| MLTab
+    MLTab -->|"3. JSON data coordinates"| MLRegression
+    MLRegression -->|"4. RegressionResponse slope, intercept, R2, trendline"| MLTab
     
-    MLTab -->|3. JSON coordinate points, group count k| MLKmeans
-    MLKmeans -->|4. KMeansResponse assignments, centroids| MLTab
+    MLTab -->|"3. JSON coordinate points, group count k"| MLKmeans
+    MLKmeans -->|"4. KMeansResponse assignments, centroids"| MLTab
 ```
 
 * **Frontend**: Built using Next.js, React, ChartJS, TailwindCSS, and Axios. Source files are located in [frontend/src/app](file:///Users/arnavmehta/Desktop/ASync/frontend/src/app) and [frontend/src/components](file:///Users/arnavmehta/Desktop/ASync/frontend/src/components).
