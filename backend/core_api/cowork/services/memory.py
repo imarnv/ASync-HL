@@ -1,0 +1,56 @@
+from __future__ import annotations
+
+from uuid import UUID
+
+from sqlmodel import Session, select
+
+from cowork.common.settings.user_settings import get_user_settings
+from cowork.harnesses.base import get_harness
+from cowork.models.project import Project
+from cowork.schemas.memory import MemoryResponse, MemoryScope
+
+
+class MemoryService:
+    def __init__(self, session: Session) -> None:
+        self.session = session
+
+    async def get_memory(self, scope: MemoryScope, category: str, project_id: UUID | None = None) -> MemoryResponse:
+        harness = get_harness(get_user_settings().harness)
+        project = self._resolve_project(scope, project_id)
+        content = await harness.retrieve_memory(scope, category, project)
+        return MemoryResponse(scope=scope, category=category, content=content or "", project_id=project_id)
+
+    async def update_memory(self, scope: MemoryScope, category: str, content: str, project_id: UUID | None = None) -> MemoryResponse:
+        harness = get_harness(get_user_settings().harness)
+        project = self._resolve_project(scope, project_id)
+        await harness.overwrite_memory(scope, category, content, project)
+        return MemoryResponse(scope=scope, category=category, content=content, project_id=project_id)
+
+    async def delete_memory(self, scope: MemoryScope, category: str, project_id: UUID | None = None) -> None:
+        harness = get_harness(get_user_settings().harness)
+        project = self._resolve_project(scope, project_id)
+        await harness.delete_memory(scope, category, project)
+
+    async def list_memory(self) -> list[MemoryResponse]:
+        harness = get_harness(get_user_settings().harness)
+        projects = list(self.session.exec(select(Project)).all())
+        items = await harness.list_memory(projects)
+        return [
+            MemoryResponse(
+                scope=item["scope"],
+                category=item["category"],
+                content=item["content"],
+                project_id=item["project"].id if item["project"] else None,
+            )
+            for item in items
+        ]
+
+    def _resolve_project(self, scope: MemoryScope, project_id: UUID | None) -> Project | None:
+        if scope == MemoryScope.project:
+            if project_id is None:
+                raise ValueError("project_id is required for project-scoped memory.")
+            project = self.session.get(Project, project_id)
+            if project is None:
+                raise ValueError(f"Project {project_id} not found.")
+            return project
+        return None

@@ -1,0 +1,5048 @@
+/* ─── Fonts ──────────────────────────────────────────────────────────────── */
+/* Roboto Mono was previously imported from Google Fonts but (a) it's
+   not actually referenced anywhere in our token system, and (b) the
+   remote @import violates our CSP (style-src 'self' 'unsafe-inline').
+   JetBrains Mono — the actual mono token — is bundled locally below. */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/InterVariable.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/InterVariable-Italic.woff2') format('woff2-variations');
+}
+@font-face {
+  font-family: 'Inter Display';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/InterDisplay-Bold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter Display';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/InterDisplay-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter Display';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('/fonts/InterDisplay-ExtraBold.woff2') format('woff2');
+}
+/* ─── Design System Tokens ───────────────────────────────────────────────── */
+/* ─── Font stack — three fonts, three jobs ─────────────────────────────────
+   Per the design guideline:
+     · Josefin Sans  — display only (heroes, taglines, app name moments)
+     · Inter         — every operable surface (H1–H3, body, buttons, lists)
+     · JetBrains Mono — strings (code, paths, IDs, kbd shortcuts, IDs)
+   All three are bundled at /fonts/ in the public dir. */
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/JetBrainsMono-400.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 500; font-display: swap; src: url('/fonts/JetBrainsMono-500.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/JetBrainsMono-700.woff2') format('woff2'); }
+@font-face { font-family: 'Josefin Sans';  font-style: normal; font-weight: 300; font-display: swap; src: url('/fonts/JosefinSans-300.woff2') format('woff2'); }
+@font-face { font-family: 'Josefin Sans';  font-style: normal; font-weight: 400; font-display: swap; src: url('/fonts/JosefinSans-400.woff2') format('woff2'); }
+@font-face { font-family: 'Josefin Sans';  font-style: normal; font-weight: 700; font-display: swap; src: url('/fonts/JosefinSans-700.woff2') format('woff2'); }
+
+:root {
+  --font-sans:    'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* Alias — every component is written with `var(--font-body)`. Without
+     this alias that var resolves to undefined and the browser falls
+     back to its default (Helvetica on macOS), which is exactly the
+     "why is my Inter not showing up" symptom. */
+  --font-body:    var(--font-sans);
+  --font-display: 'Josefin Sans', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Aqua (primary) — palette base, used by both themes */
+  --primary-50:  #CBF1F9;
+  --primary-300: #25BBD3;
+  --primary-400: #1F9CB0;
+  --primary-500: #1A8596;
+  --primary-600: #146573;
+  --primary-700: #115562;
+  --primary-800: #0E4651;
+
+  /* Frost */
+  --frost-50:  #EBF2F5;
+  --frost-100: #DDE9EE;
+  --frost-400: #A0BECA;
+  --frost-500: #7D95A1;
+  --frost-600: #64777E;
+  --frost-700: #55666D;
+  --frost-800: #3A464B;
+  --frost-900: #1A2023;
+
+  /* Stone */
+  --stone-50:  #FAFAF9;
+  --stone-100: #F5F5F4;
+  --stone-150: #F0F0EF;
+  --stone-200: #E7E5E4;
+  --stone-300: #D6D3D1;
+  --stone-400: #ADA7A4;
+
+  /* Ocean */
+  --ocean-50:  #E2F5FD;
+  --ocean-700: #276F86;
+
+  /* Sage */
+  --sage-50:  #D3F9F0;
+  --sage-400: #78BAAC;
+  --sage-500: #5D9287;
+  --sage-600: #4D7A70;
+  --sage-700: #3D6159;
+}
+
+/* ─── Light mode (default) ────────────────────────────────────────────────
+   Tokens follow the design guideline (type-and-buttons-light.html). */
+body, body[data-theme="light"] {
+  /* Tell Chromium which scheme native form controls should render in.
+     Without this, Windows draws <select> dropdown popups with light
+     system chrome regardless of theme — in dark mode the pale option
+     text lands on a white popup and every entry looks disabled.
+     (macOS uses a native NSMenu that ignores CSS, so it never shows.) */
+  color-scheme: light;
+
+  /* Guideline names — primary token surface for new code */
+  --bg:           #FAFAFA;
+  --surface:      #FFFFFF;
+  --surface-2:    #F4F4F4;
+  --surface-3:    #ECECEA;
+  --line:         #E4E4E1;
+  --line-2:       #D4D4D0;
+  /* Sidebar surface — light mode uses a warmer grey so the OS-drawn
+     inactive traffic-light circles (~#a8a8a8) read against it. Dark
+     mode follows the regular surface. */
+  --sidebar-bg:   #ECECEA;
+
+  --ink:          #0E0F10;   /* primary text */
+  --ink-2:        #3A3D40;   /* body */
+  --ink-3:        #6B6F73;   /* labels / secondary */
+  --ink-4:        #9B9FA3;   /* placeholders / tertiary */
+  --ink-5:        #C8CACC;   /* disabled */
+
+  --accent:       #1F9CB0;
+  --accent-2:     #115562;
+  --accent-3:     #0E4651;
+  --accent-bg:    #E5F4F7;
+  --accent-glow:  rgba(31, 156, 176, 0.30);
+
+  --danger:       #B91C1C;
+  --danger-bg:    #FEE2E2;
+
+  /* Active / online indicator (green dot on project cards + list rows).
+     Used with --success-glow as a soft halo when the project has live
+     activity. */
+  --success:      rgb(34, 160, 94);
+  --success-glow: rgba(34, 160, 94, 0.40);
+
+  /* Project tint palette — used by ProjectCard's accent stripe.
+     Light mode picks deeper, more saturated values that read against
+     the white surface. Dark-mode overrides below shift these toward
+     the brighter neon family. Pulled from the design guidelines
+     palettes in docs/design-guidelines/{light,dark}_mode.html. */
+  --tint-1:       #1F9CB0;  /* anton teal */
+  --tint-2:       #2F8A4A;  /* sage */
+  --tint-3:       #B98007;  /* warm amber */
+  --tint-4:       #B91C1C;  /* deep red */
+  --tint-5:       #6B5BA8;  /* iris */
+  --tint-6:       #115562;  /* depth teal */
+
+  --r-sm:         4px;
+  --r:            6px;
+  --r-lg:         10px;
+  --r-xl:         16px;
+
+  --sh-1:         0 1px 0 rgba(15,16,17,0.04), 0 1px 2px rgba(15,16,17,0.05);
+  --sh-2:         0 1px 0 rgba(15,16,17,0.04), 0 4px 12px rgba(15,16,17,0.06);
+  --sh-3:         0 1px 0 rgba(15,16,17,0.04), 0 12px 28px rgba(15,16,17,0.08);
+  --ring:         0 0 0 3px rgba(31,156,176,0.30);
+
+  /* Legacy/cowork token aliases — keep existing components working */
+  --surface-0:      var(--surface);
+  --surface-01:     var(--surface-2);
+  --surface-02:     var(--surface-3);
+  --surface-03:     var(--surface-2);
+  /* Near-opaque so the macOS inactive traffic lights (light grey)
+     read against the sidebar background. 0.78 was too translucent —
+     the inactive grey blended into the gravity field below. */
+  --surface-glass:  rgba(255, 255, 255, 0.96);
+  --surface-glass-blur: 14px;
+  --border-0:       var(--line);
+  --border-01:      var(--line-2);
+  --border-02:      var(--line-2);
+  --border-subtle:  var(--line);
+  --border-strong:  var(--line-2);
+  --text-strong:    var(--ink);
+  --text-primary:   var(--ink-2);
+  --text-default:   var(--ink-2);
+  --text-muted:     var(--ink-3);
+  --text-faint:     var(--ink-4);
+  --accent-soft:    var(--accent-bg);
+  --accent-strong:  var(--accent-2);
+  --glow:           var(--sh-2);
+  --shadow-sm:      var(--sh-1);
+}
+
+/* ─── Dark mode ──────────────────────────────────────────────────────────
+   Tokens follow type-and-buttons-dark.html — deep-night surfaces, neon
+   cyan accent (#22D3EE), readable cool whites, glow on emphasis only. */
+body[data-theme="dark"] {
+  /* Dark counterpart of the light block's color-scheme — keeps the
+     Windows-drawn <select> popup on dark system chrome so options stay
+     readable instead of looking greyed out. */
+  color-scheme: dark;
+
+  --bg:           #080d18;
+  --surface:      #0E1626;
+  --surface-2:    #131D31;
+  --surface-3:    #1A2640;
+  --line:         #1E2A44;
+  --line-2:       #2A3957;
+  /* Sidebar base — a hint of cyan over the surface navy, sized
+     small enough that the panel still reads as part of the same
+     dark family as the rest of the app. The ::before halo at the
+     top adds a brighter pool; the rest of the panel stays close to
+     surface. Tweak the second percentage up/down to push the tint
+     warmer/cooler. */
+  --sidebar-bg:   color-mix(in srgb, var(--surface) 97%, var(--accent));
+
+  --ink:          #F2F6FF;
+  --ink-2:        #C7D2E5;
+  --ink-3:        #8A97AE;
+  --ink-4:        #5C6B85;
+  --ink-5:        #3A465E;
+
+  --accent:       rgb(34, 211, 238);
+  --accent-2:     rgb(8, 178, 207);
+  --accent-3:     rgb(6, 145, 170);
+  --accent-bg:    rgba(34, 211, 238, 0.10);
+  --accent-glow:  rgba(34, 211, 238, 0.45);
+
+  --danger:       #F87171;
+  --danger-bg:    rgba(248, 113, 113, 0.12);
+
+  /* Dark-mode active indicator — neon mint with stronger glow so it
+     reads against the deep-blue surfaces. */
+  --success:      rgb(74, 222, 128);
+  --success-glow: rgba(74, 222, 128, 0.55);
+
+  /* Dark-mode project tints — brighter neon-family palette that
+     reads as luminous against the deep navy surfaces. */
+  --tint-1:       #22D3EE;  /* neon cyan (brand accent) */
+  --tint-2:       #6EE7B7;  /* mint */
+  --tint-3:       #E8C58E;  /* warm peach */
+  --tint-4:       #F87171;  /* coral */
+  --tint-5:       #C4B5FD;  /* lavender */
+  --tint-6:       #BEF264;  /* lime */
+
+  --sh-1:         0 1px 0 rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.4);
+  --sh-2:         0 1px 0 rgba(0,0,0,0.4), 0 6px 18px rgba(0,0,0,0.5);
+  --sh-3:         0 1px 0 rgba(0,0,0,0.4), 0 18px 40px rgba(0,0,0,0.6);
+  --ring:         0 0 0 3px rgba(34, 211, 238, 0.35);
+
+  /* Legacy/cowork aliases — onto the same surfaces as the guideline */
+  --surface-0:      var(--surface);
+  --surface-01:     var(--surface-2);
+  --surface-02:     var(--surface-3);
+  --surface-03:     var(--surface-2);
+  --surface-glass:  rgba(14, 22, 38, 0.72);
+  --surface-glass-blur: 18px;
+  --border-0:       var(--line);
+  --border-01:      var(--line);
+  --border-02:      var(--line-2);
+  --border-subtle:  var(--line);
+  --border-strong:  var(--line-2);
+  --text-strong:    var(--ink);
+  --text-primary:   var(--ink-2);
+  --text-default:   var(--ink-2);
+  --text-muted:     var(--ink-3);
+  --text-faint:     var(--ink-4);
+  --accent-soft:    var(--accent-bg);
+  --accent-strong:  var(--accent-2);
+  --glow:           0 0 0 1px var(--accent),
+                    0 0 18px var(--accent-glow),
+                    0 4px 24px rgba(34, 211, 238, 0.10);
+  --shadow-sm:      var(--sh-1);
+
+  /* Light-only neutrals in :root — list rows, icon buttons, composer tools,
+     and menus still reference --stone-* for hovers. Without remaps those
+     stay #F5F5F4 etc., washing out light icons and label text. */
+  --stone-50:  var(--surface);
+  --stone-100: var(--surface-2);
+  --stone-150: color-mix(in srgb, var(--surface-2) 55%, var(--surface-3) 45%);
+  --stone-200: var(--surface-3);
+  --stone-300: var(--line-2);
+  --stone-400: var(--ink-4);
+
+  /* Primary-tinted chips / nav.primary hover still point at the light
+     --primary-50 ice colour; swap to the dark accent wash. */
+  --primary-50: var(--accent-bg);
+}
+
+/* In dark mode, bold + emphasised inline text picks up a soft neon glow —
+   restrained but unmistakably "alive" per the guideline. */
+body[data-theme="dark"] strong,
+body[data-theme="dark"] b,
+body[data-theme="dark"] em {
+  color: var(--ink);
+  text-shadow: 0 0 14px var(--accent-glow);
+  font-style: normal;
+}
+
+/* ─── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* No background here — kit's gf-theme-{light,dark} on body controls
+     window-level bg so the gravity-field canvas remains visible. */
+  user-select: none;
+}
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: inherit;
+}
+button { font-family: inherit; cursor: pointer; }
+input, textarea { font-family: inherit; }
+
+#root { width: 100%; height: 100%; }
+.drag-region { -webkit-app-region: drag; }
+/* Default everything to draggable — the window-shell sets drag on the
+   outermost container so the user can pick the window up from any
+   visual surface (sidebar gaps, content panels, the gravity-field
+   bands at the edges, etc.). */
+
+/* Form controls + interactive surfaces explicitly opt OUT so clicks,
+   text selection, and scrolling work. The composer + chat area + modals
+   are real interactive surfaces; everything else stays draggable. */
+button, input, textarea, select,
+a[href],
+[role="button"],
+[role="tab"],
+[role="link"],
+[contenteditable="true"],
+.composer-wrap,
+.composer-textarea,
+.modal,
+.search-modal,
+.scroll-clean,
+.field-input,
+.field-textarea,
+/* Any surface that needs to receive wheel/scroll events. Without this,
+   the cowork shell's outer `-webkit-app-region: drag` swallows wheel
+   events and the inner overflow:auto element never sees the scroll. */
+.scroll-clean,
+.task-messages,
+[data-scroll="true"] {
+  -webkit-app-region: no-drag;
+}
+
+/* ─── Accessibility utilities ────────────────────────────────────────────
+   .sr-only — content visible only to assistive tech. Standard W3C
+   pattern: zero-sized, clipped, and unselectable, so the node stays in
+   the accessibility tree (announced by screen readers, discoverable by
+   heading/landmark navigation) but never renders pixels or steals
+   layout. Use for headings/labels/instructions that don't have a
+   visible counterpart on the page. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Scrollbars ───────────────────────────────────────────────────────────
+   Theme-aware. `color-mix` against --ink lets the same rule work in
+   light + dark — without it the hard rgba(0,0,0,…) thumb was nearly
+   invisible on the navy dark surface and the chat would seem to
+   sport a "default ugly" scrollbar.
+   Firefox uses scrollbar-width / scrollbar-color (the only two
+   tunable properties); Chromium uses ::-webkit-scrollbar pseudo-
+   elements. We set both so styled scrollbars hit every engine. */
+.scroll-clean {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink) 18%, transparent) transparent;
+}
+.scroll-clean::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-clean::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: 4px;
+}
+.scroll-clean::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+.scroll-clean::-webkit-scrollbar-track { background: transparent; }
+.scroll-clean::-webkit-scrollbar-corner { background: transparent; }
+
+/* ─── Dot canvas ─────────────────────────────────────────────────────────── */
+.dot-canvas {
+  background-image: radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes fadein-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadein-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.55; }
+}
+@keyframes typing {
+  0%   { opacity: 0.25; }
+  20%  { opacity: 1; }
+  100% { opacity: 0.25; }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+.typing-dot { animation: typing 1.2s ease-in-out infinite; }
+
+/* WCAG 2.3.3 Animation from Interactions — users with vestibular
+   sensitivity get every infinite/looping animation halted (state still
+   reaches its end value so the UI stays informative). One-shot
+   transitions/entrance animations are left untouched so the UI doesn't
+   feel broken. */
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot,
+  .typing-dot,
+  .proj-shimmer,
+  .composer-icon.listening,
+  .spinner,
+  .status-dot.busy,
+  .status-pill.is-busy .status-text__live,
+  .btn-busy-pulse,
+  [class*="set-badge-pulse"] {
+    animation: none !important;
+  }
+}
+.typing-dot:nth-child(2) { animation-delay: 0.15s; }
+.typing-dot:nth-child(3) { animation-delay: 0.30s; }
+
+/* Projects-page skeleton card — soft horizontal shimmer over the
+   placeholder boxes while the projects list loads. Driven via the
+   `proj-shimmer` className on each placeholder shape. */
+@keyframes proj-shimmer {
+  0%   { background-position: -240px 0; }
+  100% { background-position: 240px 0; }
+}
+.proj-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 240px 100%;
+  background-repeat: no-repeat;
+  animation: proj-shimmer 1.4s linear infinite;
+}
+
+/* ─── Nav / Sidebar ──────────────────────────────────────────────────────── */
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  height: 28px; padding: 0 10px; border-radius: 6px;
+  font-size: 13px; color: var(--frost-800);
+  transition: background .12s;
+  border: 0; background: transparent;
+  width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--stone-100); }
+.nav-item.active { background: var(--stone-150); color: var(--text-strong); font-weight: 500; }
+.nav-item.primary { height: 36px; margin-bottom: 4px; font-size: 13.5px; }
+.nav-item.primary:hover { background: var(--primary-50); }
+
+.recent-item {
+  display: flex; align-items: center; gap: 8px;
+  height: 26px; padding: 0 10px; border-radius: 6px;
+  font-size: 12.5px; color: var(--frost-700);
+  transition: background .12s;
+  width: 100%; white-space: nowrap; overflow: hidden;
+  border: 0; background: transparent;
+  text-align: left;
+}
+.recent-item:hover { background: var(--stone-100); color: var(--text-strong); }
+.recent-item.active { background: var(--stone-150); color: var(--text-strong); }
+
+.section-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--frost-600); letter-spacing: 0.02em;
+  padding: 12px 12px 6px;
+}
+
+.icon-btn {
+  width: 28px; height: 26px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; color: var(--frost-700);
+  transition: background .12s, color .12s;
+  cursor: pointer;
+}
+/* Make the SVG icon a passthrough for pointer events — events fire on the
+   button rect, not on the icon's stroke alone. Without this, hovering the
+   transparent fill of an outline icon escapes the button and the hover
+   state never triggers. */
+.icon-btn > svg { pointer-events: none; }
+.icon-btn:hover { background: var(--stone-150); color: var(--text-strong); }
+.icon-btn.active { background: var(--stone-200); color: var(--text-strong); }
+
+/* Lightweight hover utilities for inline-styled buttons that only need
+   a tinted background on hover without a full component class. */
+.hover-tint { transition: background .12s, color .12s; }
+.hover-tint:hover { background: color-mix(in srgb, var(--ink) 5%, transparent) !important; }
+.hover-tint-text:hover { color: var(--ink) !important; }
+.hover-tint-danger:hover { color: var(--danger) !important; }
+
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 4px; border-radius: 4px;
+  background: var(--stone-150); border: 1px solid var(--border-01);
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--frost-700);
+}
+
+/* ─── Composer ───────────────────────────────────────────────────────────── */
+.composer-wrap {
+  width: 100%; max-width: var(--composer-max-width, 640px);
+  background: var(--surface-0);
+  border: 1px solid var(--border-01);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 6px 18px -8px rgba(0,0,0,0.10);
+  transition: border-color .15s, box-shadow .15s;
+}
+.composer-wrap.focused {
+  border-color: var(--primary-300);
+  box-shadow: 0 0 0 3px rgba(31,156,176,0.15), 0 6px 18px -8px rgba(0,0,0,0.12);
+}
+/* In-fence indicator — caret sits inside a fenced code block. Subtle
+   accent-tinted inner stripe on the left edge plus a soft body wash, so
+   it layers under the focus ring rather than competing with it. Toggled
+   from React based on `fenceCtxAt(value, caretPos) !== null`. */
+.composer-wrap.in-fence {
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface-0));
+  box-shadow:
+    inset 3px 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 6px 18px -8px rgba(0, 0, 0, 0.10);
+}
+.composer-wrap.focused.in-fence {
+  box-shadow:
+    inset 3px 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 0 3px rgba(31, 156, 176, 0.15),
+    0 6px 18px -8px rgba(0, 0, 0, 0.12);
+}
+/* Font, line-height, and padding MUST match the textarea exactly — both
+   consume the same custom properties from .composer-input-shell so any
+   change propagates to both automatically. */
+.composer-textarea {
+  width: 100%; border: 0; outline: 0; resize: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--composer-font-size);
+  line-height: var(--composer-line-height);
+  color: var(--text-strong);
+  padding: var(--composer-padding);
+  min-height: 56px; max-height: 220px;
+  user-select: text;
+}
+.composer-textarea::placeholder { color: var(--frost-500); }
+
+/* Source-mode highlight overlay.
+   The textarea is the real input — the overlay sits behind it and
+   mirrors its content with the same font, padding, line-height and
+   wrapping rules so each char lines up pixel-for-pixel. The textarea
+   is z-stacked above with a transparent background so the overlay
+   shows through. We DO NOT change font-weight/style or add per-span
+   padding/margin — any of that would change wrapping and the overlay
+   would drift out of alignment. */
+.composer-input-shell {
+  position: relative;
+  width: 100%;
+  /* Single source of truth for the metrics the textarea and overlay
+     must share. Surface variants (chat-floating-composer, etc.) override
+     these vars on their own .composer-input-shell scope so both children
+     stay coupled — never set font-size/line-height/padding directly on
+     the textarea or overlay. */
+  --composer-font-size: 15px;
+  --composer-line-height: 1.5;
+  --composer-padding: 16px 18px 4px;
+}
+/* Font, line-height, and padding MUST match the textarea exactly — both
+   consume the same custom properties from .composer-input-shell so any
+   change propagates to both automatically. */
+.composer-textarea-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: var(--font-sans);
+  font-size: var(--composer-font-size);
+  line-height: var(--composer-line-height);
+  padding: var(--composer-padding);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  /* `auto` (not hidden) so programmatic scrollTop sync works — user
+     interaction is already blocked by pointer-events:none. Hide the
+     scrollbar visually so the overlay doesn't show one alongside the
+     textarea's. */
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  color: transparent;
+  background: transparent;
+  border: 0;
+  user-select: none;
+  z-index: 0;
+  /* Cap text rendering twiddles — we want the overlay and textarea
+     to lay text out identically. */
+  -webkit-font-smoothing: inherit;
+  text-rendering: inherit;
+  tab-size: inherit;
+}
+.composer-input-shell .composer-textarea {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+/* Fence-marker line — full-width tint of the ``` line itself,
+   accent-coloured text so the marker reads as syntax-significant
+   even while the textarea text sits on top. */
+.overlay-fence-marker {
+  color: color-mix(in srgb, var(--accent) 75%, var(--ink));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+/* Fence body — subtle wash that runs from end of opener to start of
+   closer, no border (would shift wrapping). */
+.overlay-fence-body {
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+/* Inline `code` — narrow tinted run on a single line. No padding,
+   no border — they'd shift char position. The text below stays
+   readable through the wash because the textarea sits above. */
+.overlay-inline-code {
+  background: color-mix(in srgb, rgb(232, 132, 110) 16%, transparent);
+  color: color-mix(in srgb, rgb(232, 132, 110) 70%, var(--ink));
+  border-radius: 3px;
+}
+.composer-textarea-overlay::-webkit-scrollbar { display: none; }
+
+/* WCAG 2.3.3 Animation from Interactions — users who prefer reduced
+   motion shouldn't see the Copy button hover/focus colour ease or the
+   composer focus-ring transition. Static state changes still apply;
+   only the transition timing is removed. */
+@media (prefers-reduced-motion: reduce) {
+  .anton-code-block-copy,
+  .composer-wrap,
+  .composer-textarea-overlay {
+    transition: none !important;
+  }
+}
+
+body[data-theme="light"] .overlay-fence-marker {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+body[data-theme="light"] .overlay-fence-body {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+body[data-theme="light"] .overlay-inline-code {
+  background: color-mix(in srgb, rgb(168, 76, 60) 16%, transparent);
+  color: color-mix(in srgb, rgb(168, 76, 60) 70%, var(--ink));
+}
+
+/* WCAG 1.4.6 / Windows High Contrast — when the user opts into a
+   stronger contrast preference, bump the overlay washes so the
+   fence markers, fenced bodies, and inline-code regions remain
+   distinguishable behind the (transparent-color) textarea text.
+   Light theme uses a darker accent / coral wash; dark theme leans
+   on a brighter accent / coral tint. The textarea text itself is
+   unchanged — it always inherits the regular --ink tokens which
+   already meet 4.5:1 against the composer background. */
+@media (prefers-contrast: more) {
+  .overlay-fence-marker {
+    color: color-mix(in srgb, var(--accent) 90%, var(--ink));
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+  .overlay-fence-body {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  .overlay-inline-code {
+    background: color-mix(in srgb, rgb(232, 132, 110) 32%, transparent);
+    color: color-mix(in srgb, rgb(232, 132, 110) 90%, var(--ink));
+  }
+  body[data-theme="light"] .overlay-fence-marker {
+    background: color-mix(in srgb, var(--accent) 32%, transparent);
+  }
+  body[data-theme="light"] .overlay-fence-body {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  body[data-theme="light"] .overlay-inline-code {
+    background: color-mix(in srgb, rgb(168, 76, 60) 30%, transparent);
+    color: color-mix(in srgb, rgb(168, 76, 60) 90%, var(--ink));
+  }
+}
+.composer-toolbar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 10px 10px;
+}
+.composer-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: transparent;
+  color: var(--frost-700); transition: background .12s, color .12s;
+  cursor: pointer;
+}
+.composer-icon:hover { background: var(--stone-100); color: var(--text-strong); }
+.composer-icon.listening {
+  color: #fff;
+  background: #d83a3a;
+  animation: composer-mic-pulse 1.4s ease-in-out infinite;
+}
+.composer-icon.listening:hover { background: #c43030; color: #fff; }
+@keyframes composer-mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(216, 58, 58, 0.45); }
+  50%      { box-shadow: 0 0 0 6px rgba(216, 58, 58, 0); }
+}
+.composer-mic {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: transparent; color: var(--frost-700);
+}
+.composer-mic:hover { background: var(--stone-100); }
+.meta-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding: 0 4px; gap: 8px; flex-wrap: wrap;
+}
+.meta-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 28px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid transparent; background: transparent;
+  color: var(--frost-700);
+  font-family: var(--font-sans); font-size: 13px;
+  transition: background .12s, border-color .12s, color .12s;
+}
+button.meta-pill { cursor: pointer; }
+button.meta-pill:hover { background: var(--surface-0); border-color: var(--border-01); color: var(--text-strong); }
+/* Send button — single shared treatment across the home composer
+   ("create new task") and the in-task chat composer. The legacy
+   --primary-700 token didn't have a dark-mode partner and read as
+   the wrong colour on dark, so the home and chat send buttons
+   diverged. Routing through --accent gives both surfaces the same
+   theme-adaptive look. */
+.send-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: var(--accent); color: #fff;
+  transition: background .15s, transform .1s;
+  box-shadow: none;
+}
+.send-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, black); }
+.send-btn:active:not(:disabled) { transform: scale(0.97); }
+.send-btn:disabled {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink-4);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ─── Dropdown menus ─────────────────────────────────────────────────────── */
+.menu {
+  position: absolute; background: var(--surface-0);
+  border: 1px solid var(--border-01); border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 12px 28px -8px rgba(0,0,0,0.18);
+  padding: 6px; min-width: 200px; z-index: 50;
+  animation: fadein-up .14s ease-out;
+}
+.menu.menu--drop-down {
+  animation: fadein-down .14s ease-out;
+}
+
+/* Connectors row inside the attach (+) menu — smooth expand/collapse */
+.menu-connectors-accordion {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.menu-connectors-accordion.is-open {
+  grid-template-rows: 1fr;
+}
+.menu-connectors-accordion__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.menu-connectors-accordion__scroll {
+  max-height: 220px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-0);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-connectors-accordion {
+    transition: none;
+  }
+}
+
+/* ─── Customize ───────────────────────────────────────────────────────────── */
+.customize-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: #1a1a1a;
+  overflow: hidden;
+}
+
+.customize-header {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border-bottom: 1px solid #e8e6df;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.customize-back-btn {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customize-back-btn:hover:not(:disabled) {
+  background: #f3f2ed;
+}
+
+.customize-back-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.customize-header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.customize-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.customize-home-layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  background: #fff;
+  min-width: 0;
+}
+
+.customize-three-pane {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 260px minmax(340px, 420px) minmax(0, 1fr);
+  background: #faf9f6;
+  min-width: 0;
+}
+
+/* Two-pane variant — connectors list on the left, credentials /
+   connect form on the right. Used when the workflow renders inside
+   the Connect Apps and Data page (no left-rail subnav needed). */
+.customize-two-pane {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  background: var(--bg);
+  min-width: 0;
+}
+
+.customize-serif {
+  font-family: "Times New Roman", Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #1a1a1a;
+}
+
+.customize-subnav {
+  background: #fafaf7;
+  border-right: 1px solid #e8e6e1;
+  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.customize-subnav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #1a1a1a;
+  font-size: 14px;
+  text-align: left;
+}
+
+.customize-subnav-item:hover {
+  background: #f1efe9;
+}
+
+.customize-subnav-item.active {
+  background: #efece4;
+  font-weight: 600;
+}
+
+.customize-subnav-section {
+  margin-top: 22px;
+}
+
+.customize-subnav-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 8px;
+  color: #6b6b6b;
+  font-size: 13px;
+}
+
+.customize-add-btn {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b6b6b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customize-add-btn:hover {
+  background: #f1efe9;
+}
+
+.customize-subnav-empty {
+  text-align: center;
+  padding: 18px 14px 6px;
+}
+
+.customize-subnav-empty p {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #6b6b6b;
+}
+
+.customize-browse-btn,
+.customize-secondary-btn {
+  height: 34px;
+  padding: 0 15px;
+  border-radius: 8px;
+  border: 1px solid #e8e6df;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.customize-browse-btn:hover,
+.customize-secondary-btn:hover {
+  background: #f3f2ed;
+}
+
+.customize-primary-btn {
+  height: 38px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customize-primary-btn:hover:not(:disabled) {
+  background: #000;
+}
+
+.customize-primary-btn:disabled,
+.customize-browse-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.customize-home-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  overflow-y: auto;
+}
+
+.customize-home-content {
+  width: 100%;
+  max-width: 640px;
+  text-align: center;
+}
+
+.customize-home-mark {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 24px;
+  color: #1a1a1a;
+}
+
+.customize-home-mark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.customize-home-content h1 {
+  margin: 0 0 14px;
+  font-size: 34px;
+}
+
+.customize-home-subtitle {
+  margin: 0 0 36px;
+  font-size: 15px;
+  color: #6b6b6b;
+}
+
+.customize-home-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customize-home-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  border: 1px solid #e8e6df;
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.customize-home-card:hover {
+  background: #fafaf7;
+}
+
+.customize-home-card.active {
+  border-color: #2f6fed;
+  box-shadow: 0 0 0 1px #2f6fed;
+}
+
+.customize-home-card-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #f3f1ec;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #1a1a1a;
+}
+
+.customize-home-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customize-home-card-copy strong {
+  font-size: 15px;
+}
+
+.customize-home-card-copy span:last-child {
+  font-size: 14px;
+  color: #6b6b6b;
+}
+
+.customize-middle-pane,
+.customize-detail-pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.customize-middle-pane {
+  border-right: 1px solid #e8e6df;
+}
+
+.customize-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  flex-shrink: 0;
+}
+
+.customize-pane-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #1a1a1a;
+}
+
+.customize-pane-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.customize-middle-scroll,
+.customize-detail-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.customize-middle-scroll {
+  padding: 0 14px 18px;
+}
+
+.customize-group-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  font-size: 13px;
+  color: #6b6b6b;
+}
+
+.customize-group-head .icon-btn {
+  margin-left: auto;
+  width: 24px;
+  height: 24px;
+}
+
+.customize-connector-row,
+.customize-skill-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+  color: #1a1a1a;
+  text-align: left;
+}
+
+.customize-connector-row:hover,
+.customize-skill-row:hover,
+.customize-skill-child:hover {
+  background: #f3f2ed;
+}
+
+.customize-connector-row.selected,
+.customize-skill-row.selected,
+.customize-skill-child.selected {
+  background: #ece8df;
+}
+
+.customize-connector-name,
+.customize-skill-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.customize-inline-tag {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #6b6b6b;
+  font-weight: 500;
+}
+
+.customize-chip {
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: #ececec;
+  color: #5a5a5a;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+}
+
+.customize-detail-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 22px;
+  flex-shrink: 0;
+}
+
+.customize-empty-detail {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  padding: 32px;
+  text-align: center;
+}
+
+.customize-empty-title {
+  font-size: 17px;
+  color: #2a2a2a;
+  max-width: 440px;
+}
+
+.customize-empty-note {
+  max-width: 380px;
+  font-size: 13px;
+  color: #6b6b6b;
+  line-height: 1.45;
+}
+
+.customize-drive-head,
+.customize-skill-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 28px 18px;
+}
+
+.customize-drive-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #1a1a1a;
+}
+
+.customize-drive-subtitle {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b6b6b;
+  max-width: 580px;
+}
+
+.customize-drive-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 28px 18px;
+}
+
+.customize-drive-card,
+.customize-form-card {
+  border: 1px solid #e8e6df;
+  border-radius: 12px;
+  background: #fafaf7;
+}
+
+.customize-drive-card {
+  padding: 14px;
+}
+
+.customize-drive-card-label,
+.customize-section-label,
+.customize-meta-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b6b6b;
+}
+
+.customize-drive-card-value {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #1a1a1a;
+}
+
+.customize-section-label {
+  padding: 0 28px;
+  margin-bottom: 10px;
+}
+
+.customize-list-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 28px 18px;
+}
+
+.customize-saved-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e8e6df;
+  background: #fafaf7;
+}
+
+.customize-saved-title {
+  font-size: 13px;
+  font-weight: 650;
+  color: #1a1a1a;
+}
+
+.customize-saved-subtitle {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: #8a8a87;
+}
+
+.customize-form-card {
+  margin: 0 28px 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.customize-form-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.customize-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: #1a1a1a;
+}
+
+.customize-input,
+.customize-search-input input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #e8e6df;
+  border-radius: 10px;
+  background: #fff;
+  color: #1a1a1a;
+  padding: 0 12px;
+  font-size: 14px;
+  outline: 0;
+}
+
+.customize-input:focus,
+.customize-search-input input:focus {
+  border-color: #cfcac0;
+  box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.08);
+}
+/* WCAG 2.4.7 / 2.4.11 — the 8% alpha glow above is too faint for a
+   focus indicator. Keyboard users get a solid ring; mouse focus keeps
+   the subtle glow. */
+.customize-input:focus-visible,
+.customize-search-input input:focus-visible {
+  outline: 2px solid var(--accent, #2f6fed);
+  outline-offset: 2px;
+}
+
+.customize-field small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b6b6b;
+}
+
+.customize-form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.customize-form-status {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #8f321a;
+}
+
+.customize-notes {
+  padding: 0 28px 28px;
+}
+
+.customize-notes ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  color: #5a5a55;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.customize-empty-state {
+  padding: 12px 28px 18px;
+  font-size: 13px;
+  color: #6b6b6b;
+}
+
+.customize-skill-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #f5f3ee;
+  border: 1px solid #e8e6df;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b6660;
+  flex-shrink: 0;
+}
+
+.customize-skill-chevron {
+  color: #8a857d;
+}
+
+.customize-skill-children {
+  padding: 2px 0 6px 18px;
+}
+
+.customize-skill-child {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  color: #1f1d1a;
+  text-align: left;
+}
+
+.customize-skill-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d9d4c8;
+}
+
+.customize-skill-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.customize-toggle {
+  width: 38px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #2f80ed;
+  padding: 2px;
+  display: inline-flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.customize-toggle span {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.customize-skill-meta {
+  display: flex;
+  gap: 56px;
+  padding: 0 28px 10px;
+  flex-wrap: wrap;
+}
+
+.customize-meta-value {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f1d1a;
+}
+
+.customize-skill-description {
+  padding: 6px 28px 18px;
+}
+
+.customize-skill-description-text {
+  margin-top: 6px;
+  max-width: 980px;
+  color: #1f1d1a;
+  line-height: 1.55;
+}
+
+.customize-preview-card {
+  margin: 0 24px 24px;
+  background: #fff;
+  border: 1px solid #e8e4dc;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 1px 0 rgba(0,0,0,0.02);
+}
+
+.customize-preview-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8e4dc;
+}
+
+.customize-article {
+  padding: 28px 36px 36px;
+  font-family: "Times New Roman", Georgia, serif;
+  color: #1f1d1a;
+  line-height: 1.65;
+  font-size: 16px;
+  user-select: text;
+}
+
+.customize-article h1 {
+  margin: 0 0 14px;
+  font-family: "Times New Roman", Georgia, serif;
+  font-weight: 600;
+  font-size: 32px;
+  letter-spacing: -0.01em;
+}
+
+.customize-article p {
+  margin: 10px 0;
+}
+
+.customize-article ul {
+  margin: 10px 0;
+  padding-left: 24px;
+}
+
+.customize-article li {
+  margin: 6px 0;
+}
+
+.customize-article code,
+.customize-source-view code {
+  font-family: var(--font-mono);
+  background: #f4ecdf;
+  color: #b03a2e;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 0.85em;
+}
+
+.customize-source-view {
+  margin: 0;
+  padding: 24px 28px 28px;
+  background: #fff;
+  color: #1f1d1a;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+.customize-modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  z-index: 30;
+}
+
+.customize-modal {
+  width: min(1280px, 100%);
+  height: min(calc(100% - 24px), 880px);
+  background: #fbfaf6;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.customize-modal-header {
+  grid-column: 1 / span 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30px 36px 18px;
+}
+
+.customize-modal-header h2 {
+  margin: 0;
+  font-size: 36px;
+}
+
+.customize-modal-side {
+  padding: 8px 16px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customize-modal-side-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14.5px;
+  color: #1a1a1a;
+  text-align: left;
+}
+
+.customize-modal-side-item:hover {
+  background: #f1efe9;
+}
+
+.customize-modal-side-item.active {
+  background: #efece4;
+  font-weight: 600;
+}
+
+.customize-modal-content {
+  padding: 8px 36px 36px 12px;
+  overflow-y: auto;
+}
+
+.customize-search-input {
+  position: relative;
+  display: block;
+  margin-bottom: 22px;
+}
+
+.customize-search-input svg {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9a9a93;
+}
+
+.customize-search-input input {
+  padding-left: 46px;
+  background: #fff;
+}
+
+.customize-modal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.customize-chip-filter,
+.customize-select,
+.customize-tab {
+  border: 0;
+  background: transparent;
+  color: #6b6b6b;
+  font-size: 14px;
+}
+
+.customize-chip-filter {
+  background: #efece4;
+  color: #1a1a1a;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.customize-select-row,
+.customize-tabset {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.customize-select {
+  min-width: 130px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid #e8e6df;
+  border-radius: 10px;
+  background: #fff;
+  color: #1a1a1a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  font-size: 13.5px;
+}
+
+.customize-tab {
+  padding: 9px 4px;
+  font-weight: 500;
+}
+
+.customize-tab.active {
+  background: #efece4;
+  color: #1a1a1a;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-weight: 600;
+}
+
+.customize-section-copy {
+  margin: 0 0 14px;
+  font-size: 13.5px;
+  color: #6b6b6b;
+}
+
+.customize-directory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.customize-directory-card {
+  padding: 18px 20px;
+  border: 1px solid #e8e6df;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+
+.customize-directory-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.customize-directory-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.customize-directory-card-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.customize-directory-card-name {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.customize-directory-card-meta {
+  margin-top: 3px;
+  font-size: 13px;
+  color: #6b6b6b;
+}
+
+.customize-directory-card p {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #5a5a55;
+}
+
+.customize-logo,
+.customize-plugin-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #e8e6df;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #444;
+  overflow: hidden;
+}
+
+.customize-logo.large {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+}
+
+.customize-logo svg,
+.customize-plugin-logo svg {
+  width: 20px;
+  height: 20px;
+}
+
+.customize-logo.large svg,
+.customize-plugin-logo.large svg {
+  width: 26px;
+  height: 26px;
+}
+
+.customize-plugin-logo {
+  background: #f5f3ec;
+  color: #9a978d;
+}
+
+.customize-logo.github {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.customize-logo.miro {
+  background: #ffd02f;
+  color: #050038;
+}
+
+.customize-logo.anton,
+.customize-logo.filesystem {
+  background: #f4f1eb;
+}
+
+.customize-logo.hubspot {
+  background: #fff;
+}
+
+.customize-logo.linear,
+.customize-logo.gmail,
+.customize-logo.google-drive,
+.customize-logo.calendar,
+.customize-logo.figma,
+.customize-logo.notion,
+.customize-logo.posthog,
+.customize-logo.slack,
+.customize-logo.supabase,
+.customize-logo.cloudflare,
+.customize-logo.chrome,
+.customize-logo.zoominfo,
+.customize-logo.generic {
+  background: #fff;
+}
+
+.customize-logo-text {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.customize-logo.filesystem .customize-logo-text {
+  color: #555;
+}
+
+.customize-logo.zoominfo .customize-logo-text {
+  color: #e7352c;
+}
+
+.customize-asana-mark {
+  width: 22px;
+  height: 22px;
+  position: relative;
+}
+
+.customize-asana-mark span {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f06a6a;
+}
+
+.customize-asana-mark.large {
+  width: 42px;
+  height: 42px;
+}
+
+.customize-asana-mark.large span {
+  width: 16px;
+  height: 16px;
+}
+
+.customize-asana-mark span:nth-child(1) {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.customize-asana-mark span:nth-child(2) {
+  bottom: 0;
+  left: 0;
+}
+
+.customize-asana-mark span:nth-child(3) {
+  bottom: 0;
+  right: 0;
+}
+
+@media (max-width: 1260px) {
+  .customize-three-pane {
+    grid-template-columns: 220px minmax(280px, 340px) minmax(0, 1fr);
+  }
+
+  .customize-home-layout {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 820px) {
+  .customize-home-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .customize-three-pane {
+    grid-template-columns: 220px 280px minmax(320px, 1fr);
+    min-width: 920px;
+  }
+
+  .customize-directory-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 6px;
+  cursor: pointer; font-size: 13px; color: var(--text-primary);
+  border: 0; background: transparent; width: 100%; text-align: left;
+}
+.menu-item:hover { background: var(--stone-100); color: var(--text-strong); }
+.menu-item.checked { color: var(--primary-700); font-weight: 500; }
+
+/* ─── Task row ───────────────────────────────────────────────────────────── */
+.task-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 14px; border-radius: 10px;
+  cursor: pointer; transition: background .12s;
+}
+.task-row:hover { background: var(--stone-100); }
+
+/* ─── Chat messages ──────────────────────────────────────────────────────── */
+.msg-user {
+  align-self: flex-end; max-width: 78%;
+  background: var(--stone-100); color: var(--text-strong);
+  border: 1px solid var(--border-01);
+  padding: 12px 16px; border-radius: 16px; border-top-right-radius: 4px;
+  font-size: 14.5px; line-height: 1.55;
+  user-select: text;
+}
+.msg-assistant { display: flex; gap: 12px; max-width: 92%; }
+.msg-assistant .body {
+  font-size: 14.5px; line-height: 1.65;
+  color: var(--text-strong); white-space: pre-wrap;
+  user-select: text;
+}
+.activity-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  max-width: 92%;
+  margin-left: 40px;
+  padding: 4px 0;
+  color: var(--frost-600);
+  font-size: 13px;
+  line-height: 1.35;
+  user-select: none;
+}
+.activity-row.running {
+  color: var(--frost-700);
+}
+.activity-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border-01);
+  color: var(--sage-600);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: var(--surface-0);
+}
+.activity-spinner {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--primary-50);
+  border-top-color: var(--primary-600);
+  animation: spin .75s linear infinite;
+}
+.activity-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.activity-chevron {
+  display: inline-flex;
+  color: var(--frost-500);
+}
+
+/* ─── Artifact card ──────────────────────────────────────────────────────── */
+.artifact-card {
+  margin-top: 12px; border: 1px solid var(--border-01);
+  border-radius: 12px; background: var(--surface-0);
+  overflow: hidden; box-shadow: var(--shadow-sm);
+}
+.artifact-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border-0);
+  background: var(--stone-50);
+}
+.bar { height: 4px; background: var(--stone-150); border-radius: 999px; overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--primary-500); border-radius: 999px; transition: width .4s ease; }
+
+/* ─── Page header ────────────────────────────────────────────────────────── */
+.page-header {
+  display: flex; align-items: flex-end; gap: 16px;
+  padding: 28px 32px 16px;
+  border-bottom: 1px solid var(--border-0);
+}
+.page-title {
+  font-family: var(--font-display);
+  font-size: 26px; font-weight: 700; letter-spacing: -0.015em;
+  color: var(--text-strong); margin: 0;
+}
+
+/* ─── Coming soon tooltip ────────────────────────────────────────────────── */
+[data-coming-soon] {
+  position: relative;
+}
+[data-coming-soon]::after {
+  content: 'Coming soon';
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(8,11,12,0.82);
+  color: #fff;
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 200;
+  font-family: var(--font-sans);
+  font-weight: 400;
+}
+[data-coming-soon]:hover::after { opacity: 1; }
+
+/* ─── Button system (per guideline) ──────────────────────────────────────
+   All variants share shape: transparent fill, colored border + label.
+   Each variant supplies --fg (the colour) and --glow (hover halo).
+   .btn is the canonical class name; .btn-primary / .btn-secondary stay as
+   backward-compat aliases that pin specific variants. */
+
+.btn {
+  --fg:    var(--ink);
+  --glow:  rgba(199, 210, 229, 0.22);
+  --bg-h:  color-mix(in srgb, var(--fg) 10%, transparent);
+  --bg-a:  color-mix(in srgb, var(--fg) 18%, transparent);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid currentColor;
+  box-shadow: var(--sh-1);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color .12s ease,
+    border-color .12s ease,
+    box-shadow .12s ease,
+    transform .04s ease,
+    color .12s ease;
+}
+.btn:hover {
+  background: var(--bg-h);
+  box-shadow: 0 0 0 1px var(--fg), 0 0 22px var(--glow);
+  text-shadow: 0 0 12px var(--glow);
+}
+.btn:active {
+  background: var(--bg-a);
+  transform: translateY(0.5px);
+  box-shadow: 0 0 0 1px var(--fg), 0 0 6px var(--glow);
+}
+.btn:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--fg), 0 0 0 4px var(--glow);
+}
+.btn:disabled, .btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Primary — accent action. Always-on idle glow, intensifies on hover. */
+.btn.primary,
+.btn-primary {
+  --fg:    var(--accent);
+  --glow:  var(--accent-glow);
+  font-weight: 600;
+  /* Apply .btn shape if the consumer omitted it (legacy callers used .btn-primary alone) */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid currentColor;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color .12s ease, border-color .12s ease,
+    box-shadow .12s ease, transform .04s ease, color .12s ease;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--fg) 18%, transparent);
+}
+body[data-theme="light"] .btn.primary,
+body[data-theme="light"] .btn-primary,
+body:not([data-theme="dark"]) .btn.primary,
+body:not([data-theme="dark"]) .btn-primary {
+  /* Light mode: no idle glow; ring + soft halo on hover only. */
+  box-shadow: var(--sh-1);
+}
+.btn.primary:hover,
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  box-shadow: 0 0 0 1px var(--fg), 0 0 28px var(--glow);
+}
+.btn.primary:active,
+.btn-primary:active {
+  background: color-mix(in srgb, var(--fg) 18%, transparent);
+  transform: translateY(0.5px);
+}
+.btn.primary:disabled,
+.btn-primary:disabled,
+.btn.primary[aria-disabled="true"],
+.btn-primary[aria-disabled="true"] {
+  cursor: not-allowed; opacity: 0.55; pointer-events: none;
+}
+
+/* Busy variant — used while the button is awaiting an async result
+   (e.g. a connection probe in the data-vault form). Reads as
+   "locked but still alive": no dim opacity, gentle accent pulse on
+   the surface + a soft halo that breathes. The base .btn-primary
+   :disabled rule above bottoms out at 0.55 opacity, which makes a
+   busy button read as broken; this rule wins on specificity (two
+   classes) and overrides both opacity and pointer-events. */
+@keyframes btn-busy-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+    filter: brightness(1.00);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 14%, transparent);
+    filter: brightness(1.08);
+  }
+}
+.btn-primary.is-busy,
+.btn.primary.is-busy {
+  cursor: progress;
+  pointer-events: none;
+  opacity: 1;
+  animation: btn-busy-pulse 1.4s ease-in-out infinite;
+  /* The keyframe paints a soft halo via box-shadow; ensure the
+     button has its own border-radius mask so the halo follows the
+     pill shape rather than overflowing as a square. */
+  will-change: filter, box-shadow;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary.is-busy,
+  .btn.primary.is-busy {
+    animation: none;
+    /* Static visual cue when motion is reduced — slightly elevated
+       brightness so the disabled / busy distinction is still
+       readable without movement. */
+    filter: brightness(1.04);
+  }
+}
+
+/* Subtle — borderless until hovered. Quietest variant. Aliased from
+   the older .btn-secondary / .btn-ghost classes. */
+.btn.subtle,
+.btn-secondary,
+.btn-ghost {
+  --fg:   var(--ink-3);
+  --glow: rgba(199, 210, 229, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid transparent;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition:
+    background-color .12s ease, border-color .12s ease,
+    box-shadow .12s ease, color .12s ease;
+}
+.btn.subtle:hover,
+.btn-secondary:hover,
+.btn-ghost:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  box-shadow: 0 0 0 1px var(--line-2), 0 0 18px rgba(199, 210, 229, 0.10);
+}
+
+/* Tinted — accent border + label, with a faint accent fill at rest. */
+.btn.tinted {
+  --fg:   var(--accent);
+  --glow: var(--accent-glow);
+  background: var(--accent-bg);
+  border-color: currentColor;
+}
+
+/* Danger */
+.btn.danger {
+  --fg:   var(--danger);
+  --glow: rgba(248, 113, 113, 0.45);
+}
+.btn.danger.primary {
+  font-weight: 600;
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.22);
+}
+
+/* Sizes */
+.btn.xs { height: 24px; padding: 0 8px;  font-size: 12px;   border-radius: var(--r-sm); gap: 4px; }
+.btn.sm { height: 28px; padding: 0 10px; font-size: 12.5px; gap: 5px; }
+.btn.lg { height: 36px; padding: 0 16px; font-size: 14px; }
+.btn.xl { height: 44px; padding: 0 20px; font-size: 15px; border-radius: var(--r); }
+
+/* Icon-only */
+.btn.icon { width: 32px; padding: 0; }
+.btn.icon.sm { width: 28px; }
+.btn.icon.xs { width: 24px; }
+.btn.icon.lg { width: 36px; }
+
+/* Block */
+.btn.block { display: flex; width: 100%; }
+
+/* Embedded keyboard hint */
+.btn .kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 4px;
+  opacity: 0.9;
+}
+
+/* ─── Type scale (per guideline) ─────────────────────────────────────── */
+.s-display     { font-family: var(--font-sans); font-size: 44px;   line-height: 1.05; letter-spacing: -0.025em; font-weight: 600; color: var(--ink); }
+.s-h1          { font-family: var(--font-sans); font-size: 28px;   line-height: 1.15; letter-spacing: -0.02em;  font-weight: 600; color: var(--ink); }
+.s-h2          { font-family: var(--font-sans); font-size: 22px;   line-height: 1.2;  letter-spacing: -0.015em; font-weight: 600; color: var(--ink); }
+.s-h3          { font-family: var(--font-sans); font-size: 17px;   line-height: 1.3;  letter-spacing: -0.01em;  font-weight: 600; color: var(--ink); }
+.s-body        { font-family: var(--font-sans); font-size: 14px;   line-height: 1.55; font-weight: 400; color: var(--ink-2); }
+.s-body-strong { font-family: var(--font-sans); font-size: 14px;   line-height: 1.55; font-weight: 500; color: var(--ink); }
+.s-small       { font-family: var(--font-sans); font-size: 13px;   line-height: 1.5;  font-weight: 400; color: var(--ink-3); }
+.s-caption     { font-family: var(--font-sans); font-size: 12px;   line-height: 1.5;  font-weight: 400; color: var(--ink-3); }
+.s-overline    { font-family: var(--font-mono); font-size: 11px;   line-height: 1.6;  font-weight: 500; letter-spacing: 0.10em; text-transform: uppercase; color: var(--ink-3); }
+.s-mono        { font-family: var(--font-mono); font-size: 13px;   line-height: 1.5; color: var(--ink); }
+
+/* ─── Special title — Josefin Sans (display only) ─────────────────────── */
+.t-special {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1.05;
+}
+.t-special.size-xl { font-size: 44px; letter-spacing: -0.005em; font-weight: 700; }
+.t-special.size-lg { font-size: 28px; letter-spacing: 0.02em;   font-weight: 400; }
+.t-special.size-md { font-size: 18px; letter-spacing: 0.06em;   font-weight: 400; }
+.t-special.size-sm { font-size: 12px; letter-spacing: 0.18em;   font-weight: 300; }
+
+/* ─── Form fields ──────────────────────────────────────────────────────── */
+.field-input,
+.field-textarea {
+  width: 100%;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  padding: 8px 12px;
+  outline: 0;
+  transition: border-color .12s ease, box-shadow .15s ease, background .12s ease;
+}
+.field-input  { height: 34px; }
+.field-textarea { min-height: 84px; padding: 10px 12px; resize: vertical; line-height: 1.5; }
+
+.field-input::placeholder,
+.field-textarea::placeholder {
+  color: var(--ink-4);
+}
+
+.field-input:hover,
+.field-textarea:hover {
+  border-color: var(--line-2);
+}
+.field-input:focus,
+.field-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: var(--ring);
+}
+/* WCAG 2.4.7 / 2.4.11 — the soft alpha ring above can fall under 3:1
+   non-text contrast against the surface. focus-visible promotes a
+   solid outline so keyboard focus is always unambiguous. */
+.field-input:focus-visible,
+.field-textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.field-input:disabled,
+.field-textarea:disabled {
+  opacity: 0.55; cursor: not-allowed;
+}
+
+/* Mono variant — useful for paths, IDs, code-shaped values */
+.field-input.mono,
+.field-textarea.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0;
+}
+
+/* Compact size */
+.field-input.sm { height: 28px; padding: 4px 10px; font-size: 12.5px; border-radius: var(--r-sm); }
+
+/* Field label group helper */
+.field-label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-bottom: 6px;
+}
+.field-hint {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: var(--ink-4);
+  margin-top: 4px;
+}
+
+/* ─── Card / Bubble surfaces ───────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  padding: 24px;
+}
+
+.card.flat { box-shadow: none; }
+.card.compact { padding: 16px; }
+.card.snug    { padding: 12px; }
+
+/* Bubble — floating glassy container; slightly translucent so the
+   gravity-field shows behind. Radius slightly tighter than .card. */
+.bubble {
+  background: var(--surface-glass);
+  -webkit-backdrop-filter: blur(var(--surface-glass-blur));
+  backdrop-filter: blur(var(--surface-glass-blur));
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--sh-2);
+}
+
+/* Eyebrow — uppercase mono label sitting above headings (per guideline) */
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin: 0 0 8px;
+  display: inline-block;
+}
+
+/* Hairline divider */
+.divider {
+  height: 1px; width: 100%;
+  background: var(--line);
+  border: 0;
+  margin: 0;
+}
+.divider.thick { height: 1px; background: var(--line-2); }
+
+/* Status pill — compact rounded label, accent-tinted */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 22px; padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.pill.muted {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink-3);
+  border-color: var(--line);
+}
+.pill.danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+/* ─── Anton sidebar (per anton-sidebar-{dark,light} guideline) ────────────
+   Token-driven; dark mode adds the cyan halo + glow on emphasis. */
+
+.anton-sidebar__chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 14px 8px;
+}
+.anton-sidebar__chrome-left { display: flex; align-items: center; gap: 14px; }
+.anton-sidebar__chrome-buttons { display: flex; gap: 2px; }
+
+.anton-sidebar__wordmark {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink);
+  padding-right: 4px;
+}
+body[data-theme="dark"] .anton-sidebar__wordmark {
+  text-shadow: 0 0 14px var(--accent-glow);
+}
+
+/* Cyan halo at the top of the sidebar — only in dark mode. */
+body[data-theme="dark"] .app-sidebar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% -10%, rgba(34,211,238,0.10), transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+.app-sidebar { position: relative; }
+.app-sidebar > * { position: relative; z-index: 1; }
+
+/* New task CTA — outlined neon in dark, accent-bordered in light */
+.anton-sidebar__cta-wrap { padding: 6px 10px 14px; }
+.btn-new-task {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  text-align: left;
+  transition: background .12s ease, color .12s ease, border-color .12s ease,
+              box-shadow .15s ease, transform .05s ease;
+}
+.btn-new-task:hover {
+  background: var(--accent-bg);
+  color: var(--accent-2);
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.btn-new-task:active { transform: translateY(0.5px); }
+.btn-new-task__label { flex: 1; }
+.btn-new-task .kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+body[data-theme="dark"] .btn-new-task {
+  font-weight: 600;
+  text-shadow: 0 0 10px var(--accent-glow);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+body[data-theme="dark"] .btn-new-task:hover {
+  box-shadow: 0 0 0 1px var(--accent), 0 0 28px var(--accent-glow);
+}
+
+/* Override existing .nav-item rules to follow the guideline shape */
+.app-sidebar .nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  height: auto;
+  border-radius: 6px;
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.3;
+  background: transparent;
+  border: 0;
+  width: 100%;
+  text-align: left;
+  transition: background .12s, color .12s;
+}
+.app-sidebar .nav-item:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  color: var(--ink);
+}
+.app-sidebar .nav-item.active {
+  color: var(--ink);
+  font-weight: 550;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+body[data-theme="dark"] .app-sidebar .nav-item.active {
+  background: var(--accent-bg);
+  text-shadow: 0 0 14px var(--accent-glow);
+}
+.app-sidebar .nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -10px; top: 6px; bottom: 6px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+body[data-theme="dark"] .app-sidebar .nav-item.active::before {
+  box-shadow: 0 0 10px var(--accent-glow);
+}
+.app-sidebar .nav-item.active span:first-child { color: var(--accent) !important; }
+
+/* Compact variant (inside Anton group) */
+.app-sidebar .nav-item.compact { padding: 6px 8px; }
+
+/* Section labels */
+.app-sidebar .section-label {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 600;
+  padding: 18px 14px 6px;
+  margin: 0;
+}
+
+/* Recents heading "View all →" — visibility now driven by JS
+   `onMouseEnter`/`onMouseLeave` on the heading <div> itself, so
+   the rule below only carries the transition and color treatment.
+   Inline opacity/transform/pointer-events on the button do the
+   actual show/hide work; this lets the hover hit area stay
+   strictly bounded to the heading row even if some surrounding
+   CSS would otherwise let `:hover` propagate. */
+.recents-heading .recents-viewall {
+  color: var(--ink-3);
+  transition:
+    opacity 160ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 140ms ease;
+}
+.recents-heading .recents-viewall:hover {
+  color: var(--accent);
+}
+
+/* Anton group — visually grouped panel */
+.anton-group {
+  position: relative;
+  margin: 0 10px;
+  padding: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+body[data-theme="dark"] .anton-group {
+  /* Flat surface — the previous vertical gradient + accent hairline
+     read as decoration on top of an already-distinct panel. The
+     border + surface-2 fill give enough separation from the sidebar
+     base on their own. */
+  background: var(--surface-2);
+}
+
+/* Pinned empty-state */
+.app-sidebar .sidebar-empty,
+.pinned-empty {
+  margin: 0 14px;
+  padding: 14px;
+  border: 1px dashed var(--line-2);
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--ink-4);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.45;
+  background: transparent;
+}
+body[data-theme="dark"] .pinned-empty,
+body[data-theme="dark"] .app-sidebar .sidebar-empty {
+  background: rgba(255,255,255,0.01);
+}
+
+/* Recent row — same shape, mono meta on the right */
+.app-sidebar .recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  height: auto;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background .1s ease, color .12s ease;
+  border: 0; background: transparent; width: 100%; text-align: left;
+}
+.app-sidebar .recent-item:hover {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+  color: var(--ink);
+}
+
+/* Footer status bar */
+.anton-sidebar__footer {
+  border-top: 1px solid var(--line);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* Footer inherits the sidebar surface so the pill reads as part of the
+     panel rather than sitting on a darker tray. */
+  background: transparent;
+}
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  /* Default: muted (offline) palette. Overridden by .is-on / .is-busy below. */
+  --status-label-color: var(--ink-3);
+  --status-value-color: var(--ink-3);
+  /* Reset button defaults — the pill is rendered as a <button> so it can
+     open the server-help modal on click. */
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+/* Clickable variant — hovers brighten the surface a touch so the user
+   senses the affordance without the pill changing shape. */
+.status-pill.is-clickable { cursor: pointer; transition: background 140ms ease, border-color 140ms ease; }
+.status-pill.is-clickable:hover {
+  background: var(--surface-3);
+  border-color: var(--line-2);
+}
+body[data-theme="dark"] .status-pill.is-clickable:hover {
+  background: color-mix(in srgb, var(--bg) 78%, var(--accent));
+}
+.status-pill.is-on   { --status-label-color: var(--ink-2); --status-value-color: var(--accent); }
+.status-pill.is-busy { --status-label-color: var(--ink-2); --status-value-color: var(--accent); }
+/* In dark mode, drop the chip a notch deeper so it reads as inset against
+   the navy sidebar surface — same family, just a touch darker. */
+body[data-theme="dark"] .status-pill {
+  background: var(--bg);
+  border-color: rgba(255, 255, 255, 0.04);
+}
+body[data-theme="dark"] .status-pill.is-on,
+body[data-theme="dark"] .status-pill.is-busy {
+  border-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+body[data-theme="dark"] .status-pill.is-on .status-text__live {
+  text-shadow: 0 0 10px var(--accent-glow);
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 99px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+  flex: 0 0 auto;
+}
+/* Live "on" indicator — same neon cyan we use across the app, with two
+   glow layers (tight + soft) so it reads as an authentic power LED on
+   the dark navy sidebar. */
+body[data-theme="dark"] .status-dot:not(.offline):not(.busy) {
+  background: var(--accent);
+  box-shadow:
+    0 0 0 3px rgba(34, 211, 238, 0.18),
+    0 0 8px rgba(34, 211, 238, 0.85),
+    0 0 18px var(--accent-glow);
+}
+.status-dot.offline {
+  background: var(--ink-4);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink-4) 18%, transparent);
+}
+/* Pulsing accent dot while the backend is starting / stopping. */
+.status-dot.busy {
+  background: var(--accent);
+  animation: status-dot-pulse 1.1s ease-in-out infinite;
+}
+@keyframes status-dot-pulse {
+  0%, 100% { opacity: 1;   transform: scale(1);    }
+  50%      { opacity: 0.45; transform: scale(0.85); }
+}
+.status-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+}
+/* Both halves of the pill text now read from the pill-level CSS vars
+   so the whole label shifts together with the on/off/busy state. */
+.status-text__faded { color: var(--status-label-color); }
+.status-text__live  { color: var(--status-value-color); }
+body[data-theme="dark"] .status-pill.is-busy .status-text__live {
+  text-shadow: 0 0 10px var(--accent-glow);
+}
+/* While starting/stopping, the value word breathes — pairs with the
+   pulsing dot and the spinner for a coherent "in flight" look. */
+.status-pill.is-busy .status-text__live {
+  animation: status-text-blink 1.1s ease-in-out infinite;
+}
+@keyframes status-text-blink {
+  0%, 100% { opacity: 1;    }
+  50%      { opacity: 0.45; }
+}
+.anton-sidebar__footer-actions { display: flex; gap: 4px; }
+
+/* Small chrome button (used in footer + sidebar header where 22px is tight) */
+.chrome-btn--small {
+  width: 22px; height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background .12s, color .12s, box-shadow .15s;
+}
+.chrome-btn--small:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+}
+body[data-theme="dark"] .chrome-btn--small:hover {
+  color: var(--accent);
+  background: transparent;
+  box-shadow: 0 0 16px rgba(34,211,238,0.25);
+}
+
+/* Server (backend) toggle in the sidebar footer. Neutral by default in
+   every state — the destructive intent only surfaces on hover when the
+   server is on (red), so the panel doesn't shout at idle. */
+.server-toggle {
+  position: relative;
+  color: var(--ink-3);
+}
+/* When the backend is on, hovering the button reveals it as a stop /
+   disconnect action — danger red, no glow on light, gentle red glow on dark. */
+.server-toggle.is-on:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+  box-shadow: none;
+}
+body[data-theme="dark"] .server-toggle.is-on:hover {
+  color: var(--danger);
+  background: transparent;
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.3);
+}
+.server-toggle.is-busy,
+.server-toggle:disabled {
+  cursor: progress;
+  opacity: 0.85;
+  color: var(--accent);
+}
+.server-toggle.is-busy:hover {
+  /* Don't show the hover fill while the action is in flight. */
+  background: transparent;
+  box-shadow: none;
+  color: var(--accent);
+}
+
+/* Help affordance next to the server toggle — appears only when the
+   backend is offline. Same size as the toggle so they read as a pair. */
+.server-help {
+  font-family: var(--font-display, inherit);
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.server-help:hover { color: var(--ink); }
+
+/* Floating bottom-right theme toggle. Always reachable, sits above the
+   gravity-field background and clear of the composer. */
+.floating-theme-toggle {
+  position: fixed;
+  right: 18px;
+  bottom: 16px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink-2);
+  cursor: pointer;
+  z-index: 50;
+  box-shadow: var(--sh-1);
+  transition: background .15s, color .15s, transform .15s, box-shadow .2s;
+}
+.floating-theme-toggle:hover {
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+body[data-theme="dark"] .floating-theme-toggle:hover {
+  color: var(--accent);
+  box-shadow: 0 0 18px rgba(34,211,238,0.3);
+}
+
+/* Skin (Style) toggle — same chrome as the theme toggle, stacked above
+   it in the corner. Lit accent while any non-default skin is active. */
+.floating-skin-toggle {
+  bottom: 54px;
+}
+body:not([data-skin="normal"]) .floating-skin-toggle {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Hide focus ring on mouse-clicked buttons so a stray Space/Enter
+   later in the session doesn't re-trigger the last-clicked nav item.
+   :focus-visible keeps the ring for true keyboard navigation. */
+button:focus:not(:focus-visible) { outline: none; }
+
+/* OrbitMorph indicator — only the dark-theme accent glow lives here;
+   the rest of the visual is rendered procedurally by the component. */
+.orbit-morph { display: inline-block; line-height: 0; }
+body[data-theme="dark"] .orbit-morph[data-state="thinking"],
+body[data-theme="dark"] .orbit-morph[data-state="done"] {
+  filter: drop-shadow(0 0 calc(var(--om-size, 18px) * 0.18) rgba(34, 211, 238, 0.55));
+}
+.orbit-morph[data-state="idle"] svg { opacity: 0.7; }
+
+@media (max-width: 700px) {
+  .app-sidebar {
+    width: 104px !important;
+  }
+  .app-sidebar .section-label,
+  .app-sidebar .recent-item span:last-child,
+  .app-sidebar .nav-item span:nth-child(2),
+  .app-sidebar .nav-item span:nth-child(3),
+  .app-sidebar .nav-item span:nth-child(4) {
+    display: none !important;
+  }
+  .app-sidebar .nav-item,
+  .app-sidebar .recent-item {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+/* Sidebar in overlay/drawer mode — always shows full content regardless of
+   viewport width, overriding the compact @media rules above. */
+.sidebar-overlay-wrap .app-sidebar {
+  width: clamp(240px, 80vw, 320px) !important;
+}
+.sidebar-overlay-wrap .app-sidebar .section-label,
+.sidebar-overlay-wrap .app-sidebar .recent-item span:last-child,
+.sidebar-overlay-wrap .app-sidebar .nav-item span:nth-child(2),
+.sidebar-overlay-wrap .app-sidebar .nav-item span:nth-child(3),
+.sidebar-overlay-wrap .app-sidebar .nav-item span:nth-child(4) {
+  display: revert !important;
+}
+.sidebar-overlay-wrap .app-sidebar .nav-item,
+.sidebar-overlay-wrap .app-sidebar .recent-item {
+  justify-content: revert !important;
+  padding: revert !important;
+}
+
+/* ─── Segmented control ──────────────────────────────────────────────────── */
+.segmented {
+  display: inline-flex;
+  background: var(--stone-100);
+  border: 1px solid var(--border-01);
+  border-radius: 8px; padding: 2px;
+}
+.segmented button {
+  height: 28px; padding: 0 12px;
+  border: 0; border-radius: 6px;
+  font-size: 12.5px; font-weight: 500; line-height: 1;
+  background: transparent; color: var(--frost-700);
+  transition: background .1s, color .1s, box-shadow .1s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.segmented button.active {
+  background: var(--surface-0); color: var(--text-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ─── Toggle ─────────────────────────────────────────────────────────────── */
+.toggle {
+  width: 38px; height: 22px; border-radius: 11px;
+  background: var(--stone-300); border: 0; padding: 2px;
+  position: relative; transition: background .15s;
+}
+.toggle.on { background: var(--primary-700); }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; transition: left .15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.toggle.on .toggle-thumb { left: 18px; }
+
+/* ─── Settings "Set" badge pulse ─────────────────────────────────────────
+   Drives the soft glow on credential rows that are stored AND on the
+   active provider's hot path. Pulses the box-shadow halo only — the
+   pill itself stays still, so the effect reads as breathing rather
+   than flicker. */
+@keyframes set-badge-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(124,196,182,0.20),
+      0 0 10px rgba(124,196,182,0.32),
+      0 0 22px rgba(93,146,135,0.18);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(124,196,182,0.30),
+      0 0 18px rgba(124,196,182,0.55),
+      0 0 34px rgba(93,146,135,0.32);
+  }
+}
+
+/* Queue strip drops in above the composer with a soft fade + slide. */
+@keyframes queue-pop-in {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.985); }
+  60%  { opacity: 1; transform: translateY(0)   scale(1.005); }
+  100% { opacity: 1; transform: translateY(0)   scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes queue-pop-in { 0%, 100% { opacity: 1; transform: none; } }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Honour OS-level reduced-motion. Hold the mid-pulse state so the
+     badge still reads as "active" without animating. */
+  @keyframes set-badge-pulse {
+    0%, 100% {
+      box-shadow:
+        0 0 0 1px rgba(124,196,182,0.25),
+        0 0 14px rgba(124,196,182,0.45),
+        0 0 28px rgba(93,146,135,0.25);
+    }
+  }
+}
+
+/* ─── Copied toast ───────────────────────────────────────────────────────
+   Floating "Copied" pill that briefly pops above the copy button. Drives
+   the whole 1.5s lifecycle from one animation so the React side just has
+   to render the element while `copied` is true. */
+@keyframes copied-pop {
+  0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.92); }
+  12%  { opacity: 1; transform: translate(-50%, 0)   scale(1);    }
+  78%  { opacity: 1; transform: translate(-50%, 0)   scale(1);    }
+  100% { opacity: 0; transform: translate(-50%, -2px) scale(0.98);}
+}
+
+/* ─── Coming soon banner ─────────────────────────────────────────────────── */
+.coming-soon-banner {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; margin: 20px 28px 0;
+  background: var(--stone-100); border: 1px solid var(--border-01);
+  border-radius: 10px; font-size: 13px; color: var(--frost-700);
+}
+
+/* ─── Dispatch pairing ──────────────────────────────────────────────────── */
+.dispatch-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #faf9f6;
+  color: #1f1e1c;
+}
+.dispatch-top {
+  height: 64px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  font-size: 14px;
+  font-weight: 650;
+  color: #1f1e1c;
+}
+.dispatch-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.dispatch-pair {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.dispatch-illustration {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 28px;
+  color: #1f1e1c;
+}
+.dispatch-illustration svg {
+  display: block;
+  flex: 0 0 auto;
+}
+.dispatch-signal {
+  color: #c96442;
+}
+.dispatch-pair h1 {
+  margin: 0 0 14px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: #1f1e1c;
+}
+.dispatch-pair p {
+  max-width: 420px;
+  margin: 0 0 28px;
+  color: #6b6862;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.dispatch-qr {
+  width: 220px;
+  height: 220px;
+  margin-bottom: 28px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+.dispatch-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.dispatch-actions {
+  width: 340px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dispatch-btn {
+  min-height: 46px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+.dispatch-btn-primary {
+  background: #1a1916;
+  color: #fff;
+}
+.dispatch-btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.86;
+}
+.dispatch-btn-ghost {
+  background: transparent;
+  color: #1f1e1c;
+}
+.dispatch-btn-ghost:hover {
+  background: #ece8df;
+}
+.dispatch-button-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.16);
+  color: rgba(255,255,255,0.86);
+  font-size: 11px;
+  line-height: 1;
+}
+
+@media (max-width: 760px) {
+  .dispatch-top {
+    height: 56px;
+    padding: 0 20px;
+  }
+  .dispatch-content {
+    align-items: flex-start;
+    padding: 28px 18px;
+    overflow-y: auto;
+  }
+  .dispatch-illustration {
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .dispatch-pair h1 {
+    font-size: 28px;
+  }
+  .dispatch-qr {
+    width: 190px;
+    height: 190px;
+  }
+  .dispatch-btn {
+    min-height: 44px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+}
+
+/* ─── Streaming indicator ────────────────────────────────────────────────── */
+.streaming-indicator {
+  display: inline-flex; gap: 4px; align-items: center; padding: 4px 0;
+}
+
+/* ─── Attachments / Context ─────────────────────────────────────────────── */
+.attachment-strip {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 10px 10px 0;
+}
+.attachment-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-width: 0; max-width: 100%;
+  padding: 6px 8px; border-radius: 8px;
+  background: var(--stone-100); border: 1px solid var(--border-01);
+  color: var(--frost-800);
+}
+.attachment-chip-icon {
+  display: inline-flex; color: var(--primary-700); flex: 0 0 auto;
+}
+.attachment-chip-body {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+.attachment-chip-name {
+  font-size: 12.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 220px;
+}
+.attachment-chip-meta {
+  font-size: 10.5px; color: var(--frost-600); text-transform: capitalize;
+}
+.attachment-chip-remove,
+.mini-icon-btn {
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 0; background: transparent; color: var(--frost-600);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.attachment-chip-remove:hover,
+.mini-icon-btn:hover { background: var(--stone-200); color: var(--text-strong); }
+.inline-dialog {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 8px);
+  z-index: 80; padding: 12px;
+  background: var(--surface-0); border: 1px solid var(--border-01);
+  border-radius: 12px; box-shadow: 0 14px 38px -12px rgba(0,0,0,0.22);
+}
+.inline-dialog-head {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px; font-size: 13.5px; color: var(--text-strong);
+}
+.inline-dialog-head strong { flex: 1; }
+.dialog-input,
+.dialog-textarea,
+.schedule-form input,
+.schedule-form textarea,
+.schedule-form select {
+  width: 100%; border: 1px solid var(--border-01);
+  border-radius: 8px; background: var(--surface-0);
+  color: var(--text-strong); outline: 0; font-size: 13px;
+  padding: 8px 10px;
+}
+.dialog-input:focus,
+.dialog-textarea:focus,
+.schedule-form input:focus,
+.schedule-form textarea:focus,
+.schedule-form select:focus {
+  border-color: var(--primary-300);
+  box-shadow: 0 0 0 3px rgba(31,156,176,0.12);
+}
+/* WCAG 2.4.7 / 2.4.11 — the 12% alpha glow above is too faint for a
+   keyboard focus indicator. focus-visible adds a solid ring. */
+.dialog-input:focus-visible,
+.dialog-textarea:focus-visible,
+.schedule-form input:focus-visible,
+.schedule-form textarea:focus-visible,
+.schedule-form select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.dialog-textarea {
+  min-height: 140px; resize: vertical; margin-top: 8px;
+  font-family: var(--font-mono); font-size: 12px;
+}
+.dialog-row { display: flex; gap: 8px; align-items: center; }
+.dialog-actions {
+  display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;
+}
+.dialog-error {
+  margin-top: 8px; padding: 8px 10px; border-radius: 8px;
+  background: #FFF7F4; border: 1px solid #F0C2B5;
+  color: #8F321A; font-size: 12.5px;
+}
+.dialog-empty {
+  padding: 12px; color: var(--frost-600); font-size: 12.5px;
+}
+.primary-btn,
+.secondary-btn {
+  min-height: 30px; padding: 0 12px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 12.5px; font-weight: 550;
+}
+.primary-btn {
+  border: 0; background: var(--primary-700); color: #fff;
+}
+.primary-btn:hover:not(:disabled) { background: var(--primary-600); }
+.secondary-btn {
+  border: 1px solid var(--border-01); background: var(--surface-0); color: var(--frost-800);
+}
+.secondary-btn:hover:not(:disabled) { background: var(--stone-100); color: var(--text-strong); }
+.primary-btn:disabled,
+.secondary-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.project-file-list {
+  max-height: 240px; overflow: auto; margin-top: 8px;
+  border: 1px solid var(--border-01); border-radius: 8px;
+}
+.project-file-row {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border: 0; border-bottom: 1px solid var(--border-0);
+  background: transparent; color: var(--frost-800); text-align: left;
+  font-size: 12.5px;
+}
+.project-file-row:hover { background: var(--stone-100); color: var(--text-strong); }
+.project-file-row span {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.project-file-row small { color: var(--frost-600); }
+.message-attachments {
+  display: flex; flex-direction: column; align-items: stretch;
+  gap: 6px; max-width: 78%;
+}
+.context-item {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border-01); border-radius: 8px;
+  padding: 8px; background: var(--surface-0); min-width: 0;
+}
+.context-icon {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--primary-50); color: var(--primary-700); flex: 0 0 auto;
+}
+.context-body {
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+.context-body span {
+  font-size: 12.5px; font-weight: 600; color: var(--text-strong);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.context-body small {
+  font-size: 11px; color: var(--frost-600); text-transform: capitalize;
+}
+
+/* ─── Search / Pins / Rail ──────────────────────────────────────────────── */
+.recent-pin {
+  margin-left: auto; display: inline-flex; color: var(--frost-500);
+  opacity: 0; transition: opacity .12s, color .12s;
+}
+.recent-item:hover .recent-pin,
+.recent-item.active .recent-pin { opacity: 1; }
+.recent-pin:hover { color: var(--primary-700); }
+.sidebar-empty {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 28px; padding: 0 10px; color: var(--frost-500);
+  font-size: 12px;
+}
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(8,11,12,0.18);
+  display: flex; justify-content: center; align-items: flex-start;
+  padding-top: min(14vh, 120px);
+}
+.search-modal {
+  width: min(620px, calc(100vw - 32px)); max-height: min(680px, calc(100vh - 80px));
+  background: var(--surface-0); border: 1px solid var(--border-01);
+  border-radius: 14px; box-shadow: 0 30px 80px -30px rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+.search-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border-0);
+  color: var(--frost-600);
+}
+.search-head input {
+  flex: 1; border: 0; outline: 0; font-size: 15px;
+  color: var(--text-strong); background: transparent;
+}
+/* WCAG 2.4.7 — borderless inputs still need a visible keyboard-focus
+   cue. The parent `.search-head` already has a divider; the focus-
+   within rule promotes that divider's colour so keyboard users can see
+   the active field without the search modal getting noisy for mouse
+   users. */
+.search-head:focus-within {
+  box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+
+/* Generic focus-within ring — apply to any parent that hosts a
+   borderless input whose `outline:0` is enforced by inline styles
+   (e.g. labels wrapping a search field). The ring lands on the
+   wrapper, not the input, so the rounded surface stays intact.
+   WCAG 2.4.7 / 2.4.11. */
+.focus-within-ring:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.search-results {
+  max-height: 560px; overflow: auto; padding: 8px;
+}
+.search-result {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 10px; border: 0; border-radius: 8px;
+  background: transparent; text-align: left;
+}
+.search-result:hover { background: var(--stone-100); }
+.search-result-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--stone-100); color: var(--frost-700); flex: 0 0 auto;
+}
+.search-result-body {
+  display: flex; flex-direction: column; min-width: 0; flex: 1;
+}
+.search-result-body strong {
+  font-size: 13.5px; color: var(--text-strong);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.search-result-body small {
+  font-size: 11.5px; color: var(--frost-600);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.search-result-type {
+  font-size: 10.5px; color: var(--frost-600);
+  background: var(--stone-150); border-radius: 999px; padding: 2px 7px;
+  text-transform: capitalize;
+}
+.search-empty {
+  padding: 18px 12px; color: var(--frost-600); font-size: 13px;
+}
+.task-body {
+  flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 280px;
+  min-height: 0;
+}
+.task-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0) 0%, var(--surface-0) 70%),
+    var(--surface-0);
+}
+.task-messages {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 28px 32px 18px;
+  display: flex;
+  justify-content: center;
+}
+.chat-column {
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.chat-composer-dock {
+  --composer-max-width: 760px;
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 14px 32px 22px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0), var(--surface-0) 28%),
+    var(--surface-0);
+}
+.chat-composer-dock > div {
+  width: min(760px, 100%);
+}
+.task-rail {
+  border-left: 1px solid var(--border-0);
+  padding: 18px 14px; overflow-y: auto; background: var(--stone-50);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.task-rail-toggle.icon-btn,
+.task-rail-close.icon-btn {
+  display: none;
+}
+.rail-panel {
+  border: 1px solid var(--border-01); border-radius: 10px;
+  background: var(--surface-0); padding: 12px;
+}
+.rail-title {
+  font-size: 13px; font-weight: 700; color: var(--text-strong);
+  margin-bottom: 10px;
+}
+.rail-state {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--frost-700); font-size: 12.5px; margin-bottom: 8px;
+}
+.rail-state > span {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid var(--border-01);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--sage-600); background: var(--surface-0);
+}
+.rail-list { display: flex; flex-direction: column; gap: 7px; }
+.rail-panel .activity-row {
+  margin-left: 0; max-width: 100%; width: 100%;
+  padding: 6px 0;
+}
+.rail-empty {
+  margin: 0; color: var(--frost-600); font-size: 12.5px; line-height: 1.45;
+}
+.rail-folder {
+  display: flex; flex-direction: column; gap: 4px; min-width: 0;
+}
+.rail-folder strong { font-size: 13px; color: var(--text-strong); }
+.rail-folder span {
+  font-size: 11.5px; color: var(--frost-600);
+  overflow-wrap: anywhere; user-select: text;
+}
+
+/* ─── Scheduling ────────────────────────────────────────────────────────── */
+/* The `.catchup-banner` block was retired with the catchup-approval
+   flow — missed runs are now surfaced as informational counters on
+   each schedule card / row instead of an actionable banner. */
+.schedule-form {
+  margin: 20px 28px 0; padding: 14px;
+  border: 1px solid var(--border-01); border-radius: 12px;
+  background: var(--surface-0); box-shadow: var(--shadow-sm);
+}
+.schedule-grid {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.schedule-form label {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 12px; font-weight: 600; color: var(--frost-700);
+}
+.schedule-prompt { margin-top: 10px; }
+.schedule-prompt textarea { min-height: 110px; resize: vertical; }
+.schedule-row {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto auto auto auto auto auto;
+  align-items: center; gap: 10px;
+  background: var(--surface-0); border: 1px solid var(--border-01);
+  border-radius: 10px; padding: 12px 14px;
+}
+.schedule-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--primary-50); color: var(--primary-700);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.status-pill {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: var(--stone-150); color: var(--frost-600); font-weight: 650;
+}
+.status-pill.on { background: var(--sage-50); color: var(--sage-700); }
+.status-pill.warn { background: #FFF1CC; color: #694A09; }
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; min-height: 220px;
+  color: var(--frost-600); text-align: center;
+  border: 1px dashed var(--border-02); border-radius: 12px;
+  background: var(--stone-50);
+}
+.empty-state strong { color: var(--text-strong); }
+.empty-state p { margin: 0; font-size: 13px; }
+
+@media (max-width: 1050px) {
+  .task-body { grid-template-columns: minmax(0, 1fr); position: relative; }
+  .task-messages { padding-inline: 20px; }
+  .chat-composer-dock { padding-inline: 20px; }
+  .task-rail-toggle.icon-btn {
+    display: inline-flex;
+  }
+  .task-rail {
+    display: none;
+  }
+  .task-rail.open {
+    display: flex;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(340px, calc(100% - 24px));
+    max-height: none;
+    z-index: 30;
+    border-left: 1px solid var(--border-01);
+    border-top: 0;
+    box-shadow: -18px 0 40px -28px rgba(0,0,0,0.35);
+  }
+  .task-rail-close.icon-btn {
+    display: inline-flex;
+    align-self: flex-end;
+    margin-bottom: -4px;
+  }
+  .schedule-grid { grid-template-columns: 1fr; }
+  .schedule-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+}
+
+/* ─── Chat experience — handoff from docs/design-guidelines/chat.html ────────
+   Layered onto the existing ChatView/Composer markup. Key principles:
+   - The chat panel is transparent so the body's gravity-grid shows through.
+   - Anton turns use a 32px "axis" rail with the OrbitMorph at the top and a
+     1px vertical line threading the response.
+   - Three-font system: Josefin (display/labels), Inter (body), JetBrains
+     Mono (operator metadata: timestamps, model, turn count).
+*/
+
+/* Chat shell — make existing layout transparent so the gravity grid shines through */
+.chat-shell .task-main {
+  background: transparent;
+}
+.chat-shell .task-messages {
+  padding: 32px 28px 220px; /* room for the floating composer */
+}
+.chat-shell .chat-column {
+  width: min(760px, 100%);
+  gap: 16px;
+}
+
+/* Chat header — Josefin title + mono meta + rail toggle */
+.chat-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+  background: transparent;
+}
+.chat-header__title {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-display);
+  font-size: 14px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex: 1; min-width: 0;
+}
+.chat-header__title .chat-header__chev { color: var(--ink-4); display: inline-flex; }
+.chat-header__meta {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 0.04em;
+  color: var(--ink-3);
+}
+.chat-header__sep {
+  width: 1px; height: 14px; background: var(--line);
+  display: inline-block;
+}
+.chat-header__rail-toggle {
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.chat-header__rail-toggle.active {
+  border-color: var(--line2, var(--line));
+  background: var(--surface);
+  color: var(--ink);
+}
+.chat-header__rail-toggle:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+
+/* Section divider — [— TODAY · MAR 28 —] */
+.chat-divider {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+}
+.chat-divider::before,
+.chat-divider::after {
+  content: ''; height: 1px; background: var(--line);
+}
+.chat-divider__label {
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+/* User turn — right-aligned pill, white surface, 18px radius */
+.chat-shell .msg-user {
+  align-self: flex-end; max-width: 78%;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px 18px;
+  font-family: var(--font-body);
+  font-size: 14.5px; line-height: 1.55; font-weight: 400;
+  box-shadow: 0 1px 0 rgba(15,16,17,0.02);
+}
+body[data-theme="dark"] .chat-shell .msg-user {
+  background: var(--surface);
+  border-color: var(--line);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+}
+
+/* Anton turn — two-column grid: 32px axis + 1fr content */
+.anton-turn {
+  display: grid; grid-template-columns: 32px 1fr; gap: 14px;
+  align-items: stretch;
+}
+.anton-turn__rail {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 2px;
+}
+.anton-turn__rail::after {
+  /* the vertical "axis" line that threads the response */
+  content: '';
+  position: absolute;
+  top: 30px; bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--line);
+  transform: translateX(-0.5px);
+}
+.anton-turn__content { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.anton-turn__head {
+  display: flex; align-items: baseline; gap: 10px;
+}
+.anton-turn__label {
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-2);
+}
+.anton-turn__time {
+  font-family: var(--font-mono);
+  font-size: 10.5px; letter-spacing: 0.04em;
+  color: var(--ink-4);
+}
+.anton-turn__body {
+  font-family: var(--font-body);
+  font-size: 14.5px; line-height: 1.55; font-weight: 400;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+/* Thinking block — collapsible, italic body */
+.thinking-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.thinking-toggle:hover { color: var(--ink-3); }
+.thinking-body {
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: 13.5px; line-height: 1.6;
+  color: var(--ink-3);
+  margin-top: 6px;
+}
+
+/* Message actions — row of 4 ghost icons after a turn resolves */
+.message-actions {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 4px;
+}
+.message-actions button {
+  width: 26px; height: 26px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px;
+  background: transparent;
+  border: 0;
+  color: var(--ink-4);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.message-actions button:hover {
+  background: var(--surface-3, color-mix(in srgb, var(--ink) 6%, transparent));
+  color: var(--ink-2);
+}
+
+/* Floating composer dock — 720px max, white surface, deep shadow,
+   gradient mask above so scrolled content fades into the page bg */
+.chat-shell .chat-composer-dock {
+  position: absolute; left: 28px; right: 28px; bottom: 22px;
+  background: transparent;
+  padding: 0;
+  display: flex; justify-content: center;
+  z-index: 5;
+  pointer-events: none; /* let inner card catch events */
+}
+.chat-shell .chat-composer-dock > div {
+  width: min(720px, 100%);
+  pointer-events: auto;
+  background: var(--surface);
+  border: 1px solid var(--line2, var(--line));
+  border-radius: 18px;
+  padding: 14px 16px 12px;
+  box-shadow:
+    0 8px 32px rgba(15,16,17,0.08),
+    0 1px 0 rgba(15,16,17,0.02);
+}
+body[data-theme="dark"] .chat-shell .chat-composer-dock > div {
+  box-shadow:
+    0 8px 32px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.02);
+}
+/* The fade mask above the composer */
+.chat-shell .task-main::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 220px;
+  background: linear-gradient(to bottom,
+    color-mix(in srgb, var(--bg) 0%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 80%, transparent) 60%,
+    var(--bg) 100%);
+  pointer-events: none;
+  z-index: 2;
+}
+.chat-shell .task-main {
+  position: relative;
+}
+
+/* Floating composer override — chat shell (18px radius, compact field).
+   Toolbar + / Send insets and control sizes match the default composer
+   (home, project prompt) so controls land in the same place inside the card. */
+.chat-floating-composer .composer-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  /* 10px horizontal + textarea side padding = same 18px text inset as
+     .composer-textarea on home; toolbar is flush on the bottom so the card
+     doesn't pick up a double band (toolbar pb + wrap pb). */
+  padding: 14px 10px 12px;
+  /* Subtle all-around lift — replaces the heavier downward shadow we
+     used to pair with the bottom gradient mask. With the mask gone, a
+     soft even glow reads as "floating panel" without darkening the
+     gravity field below. */
+  box-shadow:
+    0 1px 2px rgba(15, 16, 17, 0.04),
+    0 4px 14px rgba(15, 16, 17, 0.06);
+}
+/* Override the shared metrics on the shell so the textarea and overlay
+   stay coupled. Font-family still ships on each child because it's not
+   in the shared var set (textarea uses --font-sans by default; the
+   floating composer flips it to --font-body via two thin overrides). */
+.chat-floating-composer .composer-input-shell {
+  /* 10px (wrap) + 8px = 18px body inset — matches home .composer-textarea.
+     Tighter bottom than default textarea: toolbar supplies top spacing so we
+     don't stack 12px + 10px and leave a tall band under the input line. */
+  --composer-font-size: 14px;
+  --composer-line-height: 1.45;
+  --composer-padding: 2px 8px 6px;
+}
+.chat-floating-composer .composer-textarea {
+  font-family: var(--font-body);
+  min-height: 22px;
+}
+.chat-floating-composer .composer-textarea-overlay {
+  font-family: var(--font-body);
+}
+.chat-floating-composer .composer-toolbar {
+  /* Horizontal inset comes from .composer-wrap; no bottom padding — wrap's
+     padding-bottom gives the only inset below + / Send (matches pre-alignment). */
+  padding: 6px 0 0;
+  gap: 6px;
+}
+.chat-floating-composer .composer-icon,
+.chat-floating-composer .composer-mic {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 0; background: transparent;
+  color: var(--ink-2);
+}
+.chat-floating-composer .composer-icon:hover,
+.chat-floating-composer .composer-mic:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink);
+}
+.chat-floating-composer .send-btn {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--accent); color: #fff;
+  box-shadow: none;
+}
+.chat-floating-composer .send-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, black);
+}
+.chat-floating-composer .send-btn:disabled {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  color: var(--ink-4);
+}
+body[data-theme="dark"] .chat-floating-composer .composer-wrap {
+  /* Softer than the old 0.55-alpha 32-blur — that was producing a
+     heavy slab below the composer that drew the eye down. Match the
+     light-mode shadow's restraint, just dialed up enough to read
+     against the navy surface. */
+  box-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+.chat-floating-composer .composer-wrap.focused {
+  border-color: var(--accent);
+  box-shadow:
+    0 8px 32px rgba(15, 16, 17, 0.10),
+    0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Mobile shell
+   Active only when the cowork SPA renders inside MobileShell (viewport
+   width < 640px). Reuses the app's design tokens so light/dark both
+   work without a separate palette.
+   ───────────────────────────────────────────────────────────────────── */
+
+.mshell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text-default);
+  font-family: var(--font-sans);
+  /* Honor iOS safe areas at the device edges. */
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.mshell__top {
+  flex: 0 0 auto;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+  z-index: 2;
+}
+
+.mshell__title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.mshell__action {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-default);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 160ms ease;
+}
+.mshell__action:active { background: var(--surface-2); }
+
+/* Mirrors the hamburger's 40px footprint on the right side so the
+   title stays optically centered now that the top-bar "+" is gone. */
+.mshell__top-spacer { display: inline-block; width: 40px; height: 40px; }
+
+/* Hamburger button — three bars that animate into an X when open. */
+.mshell__hamburger {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 160ms ease;
+}
+.mshell__hamburger:active { background: var(--surface-2); }
+.mshell__hamburger span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: var(--text-default);
+  border-radius: 2px;
+  transform-origin: center;
+  transition:
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mshell__hamburger.is-open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+  width: 22px;
+}
+.mshell__hamburger.is-open span:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+.mshell__hamburger.is-open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+  width: 22px;
+}
+
+.mshell__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+}
+/* Reset the global drag region inside the mobile body so the OS doesn't
+   try to drag the window on touch (Electron only — harmless on web). */
+.mshell__body, .mshell__body * { -webkit-app-region: no-drag; }
+
+.mshell__scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+  transition: opacity 280ms cubic-bezier(0.32, 0.72, 0, 1);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.mshell__scrim.is-open { opacity: 1; pointer-events: auto; }
+
+.mshell__drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(86vw, 340px);
+  background: var(--surface);
+  border-right: 1px solid var(--border-subtle);
+  box-shadow: 4px 0 28px rgba(0, 0, 0, 0.22);
+  transform: translateX(-105%);
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.mshell__drawer.is-open { transform: translateX(0); }
+
+.mshell__drawer-head {
+  flex: 0 0 auto;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 0 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+/* Matches .anton-sidebar__wordmark (the desktop sidebar's ANTON
+   brand): font-display, uppercase, the same letter-spacing — so the
+   mobile drawer shares the same brand typography. Size bumped from
+   the sidebar's 11px since the drawer header has more vertical room. */
+.mshell__drawer-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+body[data-theme="dark"] .mshell__drawer-title {
+  text-shadow: 0 0 14px var(--accent-glow);
+}
+.mshell__close {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.mshell__close:active { background: var(--surface-2); }
+
+.mshell__drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 8px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Rows — used for nav entries, accordion items, drawer top buttons. */
+.mshell-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text-default);
+  padding: 12px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 140ms ease;
+  min-height: 48px;
+}
+.mshell-row:active { background: var(--surface-2); }
+.mshell-row.is-active { background: var(--accent-bg); color: var(--text-strong); }
+.mshell-row--top { padding: 14px 12px; }
+.mshell-row__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mshell-row__primary {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mshell-row__secondary {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mshell-row__badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.mshell-row__chev {
+  color: var(--text-faint);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Accordion section. The chevron rotates 90° down when expanded. */
+.mshell-accordion {
+  border-bottom: 1px solid var(--border-subtle);
+}
+.mshell-accordion:last-of-type { border-bottom: none; }
+.mshell-accordion__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 14px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-strong);
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 12px;
+  transition: background-color 140ms ease;
+}
+.mshell-accordion__head:active { background: var(--surface-2); }
+.mshell-accordion__label {
+  flex: 1;
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+}
+.mshell-accordion__count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.mshell-accordion__chev {
+  display: inline-flex;
+  color: var(--text-muted);
+  transform: rotate(0deg);
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mshell-accordion__chev.is-open { transform: rotate(90deg); }
+.mshell-accordion__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mshell-accordion__body.is-open { grid-template-rows: 1fr; }
+.mshell-accordion__inner {
+  overflow: hidden;
+  min-height: 0;
+}
+.mshell-accordion__inner > .mshell-row {
+  padding-left: 22px;
+  min-height: 44px;
+}
+
+.mshell-empty {
+  padding: 12px 22px 16px;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+.mshell-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 10px 12px;
+}
+
+/* FAB — anchored bottom-right inside the mobile body. Sits above the
+   home-indicator on iOS via env(safe-area-inset-bottom). */
+.mshell__fab {
+  position: absolute;
+  right: 18px;
+  bottom: calc(20px + env(safe-area-inset-bottom, 0));
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.22),
+    0 0 0 1px color-mix(in srgb, var(--accent) 60%, transparent);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms ease;
+  z-index: 5;
+}
+.mshell__fab:active {
+  transform: scale(0.94);
+  background: var(--accent-2);
+}
+/* When the FAB menu is open, rotate the "+" 45° so it reads as a
+   close affordance. Reused press-state scale runs on top via :active. */
+.mshell__fab.is-open {
+  transform: rotate(45deg);
+  background: var(--accent-2);
+}
+
+/* Tap-outside scrim. Transparent — its only job is to catch taps
+   that should dismiss the FAB menu. Sits below the menu (z 4) so
+   the menu's tap targets stay live. */
+.mshell__fab-scrim {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+}
+.mshell__fab-scrim.is-open { opacity: 1; pointer-events: auto; }
+
+/* Popover anchored to bottom-right above the FAB. Sized to its
+   content; slides up + fades in. Pointer-events suppressed when
+   collapsed so it doesn't block content underneath. */
+.mshell__fab-menu {
+  position: absolute;
+  right: 18px;
+  bottom: calc(86px + env(safe-area-inset-bottom, 0));
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.22),
+    0 1px 0 rgba(255, 255, 255, 0.02) inset;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 6;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px) scale(0.96);
+  transform-origin: 100% 100%;
+  transition:
+    opacity 200ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mshell__fab-menu.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+.mshell__fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-default);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 140ms ease;
+  min-height: 44px;
+}
+.mshell__fab-menu-item:active { background: var(--surface-2); }
+.mshell__fab-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+.mshell__fab-menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.mshell__fab-menu-primary {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+.mshell__fab-menu-secondary {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* Separator between adjacent settings rows — border sits between siblings,
+   never below the last item in a collapsible card. */
+.settings-section + .settings-section,
+.settings-section + .settings-hide-mobile,
+.settings-hide-mobile .settings-section + .settings-section,
+.settings-provider-row + .settings-provider-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* When mobile shell is active, hide the desktop floating theme toggle —
+   the drawer carries the Settings entry. Mobile shell renders only at
+   < 640px, where the desktop floating toggle would overlap the FAB. */
+@media (max-width: 639.98px) {
+  .floating-theme-toggle { display: none; }
+
+  /* Project detail (ProjectsView in detail mode) — desktop puts the
+     rail (Working folder + Context + Scheduled) in a 320px right
+     column. On a phone-width viewport, collapse to a single column
+     and drop the rail entirely — composer + task list only. Inline
+     style attributes in ProjectsView.jsx force the desktop grid, so
+     these overrides use !important. */
+  .project-detail-root {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: 1fr !important;
+  }
+  .project-detail-rail { display: none !important; }
+  .project-detail-rail-toggle,
+  .project-detail-rail-toggle-row { display: none !important; }
+
+  /* Settings — Section is `1fr 320px` (description | control) on
+     desktop. Stack on phone so the control column doesn't get pushed
+     off-screen. Tighter outer padding too — 28px gutters waste a lot
+     of horizontal space at 375px wide. */
+  .settings-section {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .settings-scroll {
+    padding: 16px 14px calc(96px + env(safe-area-inset-bottom, 0)) !important;
+  }
+  /* Provider rows have their own 3-column inline grid (title |
+     api-key/url inputs | remove-button) that doesn't share the
+     Section component. Stack so the API key field gets the full
+     screen width; remove-button slides down to the end. */
+  .settings-provider-row {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .settings-provider-row > div:last-child {
+    justify-self: end;
+  }
+  /* Desktop-only Settings sections (animated background, nav-panel
+     counters) — no value on a phone. */
+  .settings-hide-mobile { display: none !important; }
+
+  /* Schedule detail (a scheduled task's full page) — desktop crams
+     three actions (Enable / Edit / Run now) plus a long title into
+     one row, and the Health card puts three metric tiles inline
+     with the description. Both go to two-row stacked layouts on a
+     phone. Outer gutters tighten too. */
+  .sched-crumb {
+    padding: 12px 14px 6px !important;
+  }
+  .sched-body {
+    padding: 4px 14px calc(96px + env(safe-area-inset-bottom, 0)) !important;
+  }
+  .sched-hero,
+  .sched-health {
+    padding: 14px 14px !important;
+    border-radius: 12px !important;
+  }
+  /* Hero top row: title block on top, action toolbar wraps to next
+     line so each control gets a proper tap target instead of being
+     squeezed against the title. */
+  .sched-hero-top {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .sched-hero-actions {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+  .sched-hero-actions > * { flex: 0 0 auto; }
+  /* Run now is the primary action — let it grow to fill the row's
+     remaining width so it reads as the dominant CTA. */
+  .sched-hero-actions > .btn-primary { flex: 1 1 auto; justify-content: center; }
+
+  /* Health top row: description on top, metric tiles on their own
+     row with even spacing. */
+  .sched-health-top {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .sched-health-metrics {
+    display: flex !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+  .sched-health-metrics > * { flex: 1 1 0; min-width: 0; }
+
+  /* Memories / Skills library / Connect Apps publish — all use
+     fixed-width sidebars (300px or 360px) in a 2-col grid. Collapse
+     to single column on phone; the list stacks above the detail. */
+  .util-split,
+  .util-publish {
+    grid-template-columns: 1fr !important;
+    padding: 16px 14px calc(96px + env(safe-area-inset-bottom, 0)) !important;
+    gap: 14px !important;
+  }
+  /* The Skills view's sidebar uses a hard right border that reads as
+     a visible divider after stacking — soften it on phone. */
+  .util-split > div:first-child {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  /* The mobile FAB menu is the single create entry on phone — hide
+     the in-page "+ New project" header button and the trailing
+     dashed tile in the projects grid so we don't show three "+"
+     affordances stacked on one screen. */
+  .proj-new-action,
+  .proj-new-tile { display: none !important; }
+
+  /* Grid/list view toggle — list mode breaks at phone widths
+     (5-column row), and the toggle takes up header space we don't
+     have. Force grid (see effectiveView in ProjectsView /
+     ArtifactsView) and hide the switch. */
+  .proj-view-toggle,
+  .artifacts-view-toggle { display: none !important; }
+
+  /* Artifacts grid — desktop uses 32px horizontal gutters which
+     waste half the screen on a phone. Tighten to 14px and reserve
+     bottom space for the safe area. */
+  .artifacts-grid {
+    padding: 6px 14px calc(80px + env(safe-area-inset-bottom, 0)) !important;
+  }
+
+  /* Chat right-hand rail — only hide the FLOATING expand button on
+     mobile (.chat-rail-toggle). The CLOSE button inside the rail
+     (.chat-rail-close) stays visible so the user can dismiss the
+     fullscreen form panel. The mobile shell's hamburger drawer
+     covers the same surfaces that the expand button used to. */
+  .chat-rail-toggle { display: none !important; }
+
+  /* Make the rail overlay truly fullscreen on mobile so the data-
+     vault form fills the viewport instead of being a 320px-wide
+     slide-over. Inline styles supply the slide transform via
+     transform: translateX; we only override the static frame here. */
+  .chat-rail-aside {
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    padding-top: calc(env(safe-area-inset-top, 0) + 8px) !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0) + 14px) !important;
+  }
+
+  /* Home view (new task) — desktop has the orb sit inline to the
+     left of the greeting (negative margin pulls it outside the text
+     column). On phone widths, stack the orb on top of the greeting
+     and centre everything. Disable the horizontal travel transform
+     too so the orb stays centred through every boot phase. */
+  .home-greeting-row {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 14px !important;
+    font-size: 26px !important;
+  }
+  .home-orb {
+    margin-left: 0 !important;
+    transform: none !important;
+  }
+
+  /* Scratchpad modal — go fullscreen so a 94vw card with rounded
+     corners doesn't waste space inside a fixed scrim at phone widths. */
+  .scratchpad-modal {
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+  }
+  /* Tighter horizontal padding so each cell's output/code can use
+     the full screen width. Was pl-6 pr-6 (24px) — overkill on phone. */
+  .scratchpad-cell {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  /* Collapse the auto | 1fr grid (step-badge | content) into a
+     single column. The step badge stacks on its own row above the
+     description; output and code blocks then occupy the full width
+     instead of being indented under the badge column. */
+  .scratchpad-cell-grid {
+    grid-template-columns: 1fr !important;
+    column-gap: 0 !important;
+    row-gap: 4px !important;
+  }
+}
+
+/* ─── Chat fenced code blocks (Claude-style) ─────────────────────────────
+   Rendered by MarkdownCode for any fenced block whose language isn't
+   one of our special kinds (chartjs / chart / data-vault-form*).
+   Header carries the language tag + a Copy button driven by a delegated
+   click listener mounted on the MarkdownContent root. */
+/* Text selection inside chat-rendered markdown — scoped so it can't leak
+   into other surfaces (composer, side panels, etc.). Replaces the OS-
+   default blue with an on-palette accent wash; `color: inherit` keeps
+   the underlying ink colour readable through the highlight. */
+.markdown-content ::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  color: inherit;
+}
+
+/* Force unbreakable strings (URLs, file paths, hashes) to wrap inside
+   chat-rendered markdown. Tailwind's `break-words` (overflow-wrap:
+   break-word) only breaks once the word has already pushed the box,
+   which lets long URLs blow past the user-bubble's 78% width cap.
+   `anywhere` allows breaks before that overflow can happen. */
+.markdown-content {
+  overflow-wrap: anywhere;
+}
+
+/* ─── User message turn ────────────────────────────────────────────────
+   Refactored out of inline-style sprawl in ChatView.UserTurn. Layout
+   wrapper + bubble + hover-revealed action toolbar + attachment chip +
+   timestamp. Hover affordances are pure CSS (`:hover`) so the component
+   doesn't need useState flags any more. */
+.user-turn {
+  display: flex;
+  justify-content: flex-end;
+  position: relative;
+}
+.user-turn-inner {
+  max-width: 78%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  position: relative;
+}
+.user-turn-bubble {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px 18px;
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  box-shadow: 0 1px 0 rgba(15, 16, 17, 0.02);
+  user-select: text;
+}
+/* Action toolbar — always present, subtle at rest, brightens on bubble-
+   or self-hover. The previous opacity:0 + pointer-events:none default
+   broke clickability: buttons sit at right:-32px, outside `.user-turn`'s
+   bounding box, so the cursor couldn't reach them without losing the
+   parent's :hover. Keeping them always interactive (with a low-opacity
+   resting state) sidesteps that entirely. `has-meta` lifts the button
+   above the "you · time" line; `is-stacked` adds another row when both
+   Edit and Trash are visible. */
+.user-turn-action {
+  position: absolute;
+  right: -32px;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-4);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 140ms ease, color 140ms ease, background 140ms ease;
+}
+.user-turn:hover .user-turn-action,
+.user-turn-action:hover,
+.user-turn-action:focus-visible {
+  opacity: 1;
+}
+.user-turn-action:hover { color: var(--accent); }
+.user-turn-action--danger:hover { color: var(--danger); }
+.user-turn-action.has-meta { bottom: 18px; }
+.user-turn-action.is-stacked { bottom: 48px; }
+
+.user-turn-attachment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.user-turn-attachment-icon {
+  color: var(--ink-3);
+  display: inline-flex;
+}
+.user-turn-attachment-name { color: var(--ink); }
+.user-turn-attachment-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-4);
+}
+.user-turn-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-4);
+  letter-spacing: 0.04em;
+}
+
+/* Heading scale inside user-message bubbles — MarkdownContent's defaults
+   (h1: 20px, h2: 17px) overpower the 14.5px bubble body when someone
+   sends `# Title`. Clamp them to body-adjacent sizes so the bubble keeps
+   a chat-message feel rather than a document banner. h3 is already
+   uppercase/small in MarkdownContent, no adjustment needed. */
+.user-turn .markdown-content h1 {
+  font-size: 16px;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+.user-turn .markdown-content h2 {
+  font-size: 15px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+/* Inline `code` chip — Claude-style coral. Light coral foreground on a
+   gentle warm wash, thin warm outline. Hard-coded coral values (rather
+   than going through the cyan --accent ramp) because Claude's identity
+   for code-as-text is intentionally divergent from the cyan accent. */
+.anton-inline-code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: inherit;
+  color: rgb(232, 132, 110);
+  background: rgba(232, 132, 110, 0.10);
+  border: 1px solid rgba(232, 132, 110, 0.20);
+  border-radius: 4px;
+  padding: 1px 5px;
+  word-break: break-word;
+}
+body[data-theme="light"] .anton-inline-code {
+  /* Darker coral on light mode keeps AA contrast against the pale
+     bubble surface. */
+  color: rgb(168, 76, 60);
+  background: rgba(232, 132, 110, 0.14);
+  border-color: rgba(168, 76, 60, 0.25);
+}
+
+.anton-code-block {
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  overflow: hidden;
+  font-family: var(--font-mono);
+}
+/* When the code block is the first or last child of a chat bubble, its
+   own 12px outer margin stacks with the bubble's padding (14px 18px) and
+   we end up with a fat empty band. Reset the edge margins so the block
+   sits flush against the bubble's inner padding. */
+.markdown-content > .anton-code-block:first-child { margin-top: 0; }
+.markdown-content > .anton-code-block:last-child { margin-bottom: 0; }
+/* Header sits flush on the block body — no divider line, no tinted
+   background. Claude's pattern: language label in muted ink on the
+   left, single Copy icon on the right, both the same surface as the
+   code beneath. */
+.anton-code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px 4px;
+  background: transparent;
+  border-bottom: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: var(--ink-3);
+}
+.anton-code-block-lang {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.anton-code-block-copy {
+  display: inline-flex;
+  align-items: center;
+  /* No text label visible — Claude shows the icon only. We keep the
+     label in the DOM for the aria-live announcement; CSS just hides it
+     visually (see .anton-code-block-copy-label below). */
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  font: inherit;
+  font-size: 11px;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.anton-code-block-copy:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  color: var(--ink);
+}
+/* WCAG 2.4.7 Focus Visible / 1.4.11 Non-text Contrast — keyboard users
+   need a visible focus indicator on the icon-only Copy button.
+   color-mix on --accent stays theme-adaptive (cyan on dark, deeper on
+   light) and clears the 3:1 non-text contrast threshold against the
+   neighbouring surface tokens. */
+.anton-code-block-copy:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--ink);
+}
+.anton-code-block-copy.is-copied {
+  color: rgb(232, 132, 110);
+}
+/* Hide the visible "Copy" / "Copied" label; the icon carries the
+   affordance. The element stays in the DOM with aria-live="polite" so
+   screen readers still get the success announcement. */
+.anton-code-block-copy-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+}
+.anton-code-block-copy-icon {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+/* Two icons sit in the DOM at once (copy + check); CSS picks which is
+   visible based on the `.is-copied` class the delegated click handler
+   toggles. Keeping both mounted means no layout shift on the swap. */
+.anton-code-block-copy-icon--done { display: none; }
+.anton-code-block-copy.is-copied .anton-code-block-copy-icon--idle { display: none; }
+.anton-code-block-copy.is-copied .anton-code-block-copy-icon--done { display: inline-flex; }
+.anton-code-block-pre {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  background: transparent;
+  white-space: pre;
+}
+.anton-code-block-pre code.hljs {
+  display: inline;
+  padding: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+/* Scoped highlight.js theme — dark (default). Only matches tokens
+   inside our wrapper so the page can't accidentally inherit hljs
+   styling elsewhere. The palette pulls from the cyberpunk accent set:
+   cyan for names/titles, mint for strings, purple for keywords,
+   sand for numbers/built-ins, low-contrast ink-4 for comments. */
+.anton-code-block .hljs-keyword,
+.anton-code-block .hljs-selector-tag,
+.anton-code-block .hljs-literal,
+.anton-code-block .hljs-doctag { color: rgb(196, 144, 255); }
+.anton-code-block .hljs-string,
+.anton-code-block .hljs-regexp,
+.anton-code-block .hljs-attr,
+.anton-code-block .hljs-symbol,
+.anton-code-block .hljs-template-tag,
+.anton-code-block .hljs-template-variable { color: rgb(125, 226, 184); }
+.anton-code-block .hljs-number,
+.anton-code-block .hljs-built_in,
+.anton-code-block .hljs-builtin-name { color: rgb(246, 199, 121); }
+.anton-code-block .hljs-comment,
+.anton-code-block .hljs-quote { color: var(--ink-4); }
+.anton-code-block .hljs-title,
+.anton-code-block .hljs-title.class_,
+.anton-code-block .hljs-title.function_,
+.anton-code-block .hljs-section { color: var(--ink); }
+.anton-code-block .hljs-name,
+.anton-code-block .hljs-tag,
+.anton-code-block .hljs-meta,
+.anton-code-block .hljs-variable,
+.anton-code-block .hljs-bullet { color: rgb(123, 178, 255); }
+.anton-code-block .hljs-property,
+.anton-code-block .hljs-params { color: var(--ink-2); }
+.anton-code-block .hljs-deletion { color: rgb(255, 122, 145); background: color-mix(in srgb, rgb(255, 122, 145) 12%, transparent); }
+.anton-code-block .hljs-addition { color: rgb(125, 226, 184); background: color-mix(in srgb, rgb(125, 226, 184) 12%, transparent); }
+.anton-code-block .hljs-emphasis { font-style: italic; }
+.anton-code-block .hljs-strong { font-weight: 600; }
+
+/* Light-mode palette — same hue families, lower brightness so they
+   stay readable against the pale surface tokens. */
+body[data-theme="light"] .anton-code-block .hljs-keyword,
+body[data-theme="light"] .anton-code-block .hljs-selector-tag,
+body[data-theme="light"] .anton-code-block .hljs-literal,
+body[data-theme="light"] .anton-code-block .hljs-doctag { color: rgb(124, 58, 175); }
+body[data-theme="light"] .anton-code-block .hljs-string,
+body[data-theme="light"] .anton-code-block .hljs-regexp,
+body[data-theme="light"] .anton-code-block .hljs-attr,
+body[data-theme="light"] .anton-code-block .hljs-symbol,
+body[data-theme="light"] .anton-code-block .hljs-template-tag,
+body[data-theme="light"] .anton-code-block .hljs-template-variable { color: rgb(20, 121, 79); }
+body[data-theme="light"] .anton-code-block .hljs-number,
+body[data-theme="light"] .anton-code-block .hljs-built_in,
+body[data-theme="light"] .anton-code-block .hljs-builtin-name { color: rgb(170, 100, 0); }
+body[data-theme="light"] .anton-code-block .hljs-title,
+body[data-theme="light"] .anton-code-block .hljs-title.class_,
+body[data-theme="light"] .anton-code-block .hljs-title.function_,
+body[data-theme="light"] .anton-code-block .hljs-section { color: rgb(17, 85, 98); }
+body[data-theme="light"] .anton-code-block .hljs-name,
+body[data-theme="light"] .anton-code-block .hljs-tag,
+body[data-theme="light"] .anton-code-block .hljs-meta,
+body[data-theme="light"] .anton-code-block .hljs-variable,
+body[data-theme="light"] .anton-code-block .hljs-bullet { color: rgb(28, 76, 169); }
+
+/* ─── iOS auto-zoom suppression (mobile only) ─────────────────────────
+   iOS Safari (and a few Android browsers) auto-zoom the page when a
+   text input with computed font-size < 16px receives focus. The
+   viewport-meta toggle in App.jsx (focusin → maximum-scale=1) catches
+   most cases but races with the zoom commit on programmatic focus
+   (menu opens, then focuses input via rAF) and on the FIRST input
+   tapped after a route change — exactly the cases the user hit on
+   the "+ New project" menu input and the chat reply composer.
+   Bumping computed font-size to ≥16px on the mobile breakpoint stops
+   the zoom from firing in the first place, which is the robust fix.
+
+   `!important` is required because several inputs ship inline
+   `style={{ fontSize: 13 }}` (menu inputs, modal inputs) and inline
+   styles outrank normal CSS rules. Scoped to the mobile breakpoint so
+   desktop visual metrics stay exactly as designed. The composer uses
+   `--composer-font-size` (set in .composer-input-shell) so the
+   textarea + highlight overlay both pick this up via the var. */
+@media (max-width: 640px) {
+  /* Main composer + chat-floating composer — both consume
+     --composer-font-size from .composer-input-shell. Bumping the var
+     keeps the textarea and its source-mode overlay in lockstep. */
+  .composer-input-shell { --composer-font-size: 16px !important; }
+
+  /* Ad-hoc text inputs scattered across modals + menus (new project
+     row in the project picker, NewProjectModal name/instructions,
+     settings inputs, search). `:where()` keeps specificity at 0 so
+     existing styles still cascade, but the `!important` on the
+     declaration overrides inline font-size:13/13.5/14. */
+  input:where(
+    [type="text"], [type="search"], [type="email"], [type="url"],
+    [type="tel"], [type="password"], [type="number"], :not([type])
+  ),
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+
+/* ── Channels (ChannelsView) ─────────────────────────────────────────── */
+.channels-view { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--bg); color: var(--fg); }
+.channels-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border-subtle, rgba(0,0,0,.08)); font-family: var(--font-display, inherit); font-size: 15px; font-weight: 600; }
+.channels-lede { padding: 16px 20px 0; }
+.channels-pad { padding: 16px 20px; }
+/* Master–detail split. flex:1 + min-height:0 give the two panes a bounded
+   height inside the flex column; without them the content grows past the
+   window and the inner scroll never engages (most visible in the
+   fixed-height Electron shell). */
+.channels-body { flex: 1; min-height: 0; display: flex; border-top: 1px solid var(--border-subtle, rgba(0,0,0,.08)); }
+.channels-list { flex: 0 0 250px; min-height: 0; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--border-subtle, rgba(0,0,0,.08)); }
+.channels-list-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--fg); font: inherit; cursor: pointer; text-align: left; }
+.channels-list-item:hover:not(.is-active) { background: color-mix(in srgb, var(--fg) 5%, transparent); }
+.channels-list-item.is-active { background: color-mix(in srgb, var(--fg) 7%, transparent); border-color: var(--border-02, rgba(0,0,0,.1)); }
+.channels-list-name { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 13px; font-weight: 600; min-width: 0; }
+/* Brand-logo chip: a white tile keeps dark brand marks (e.g. Slack's plum)
+   legible on dark themes. */
+.channels-logo { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: #fff; border: 1px solid var(--border-02, rgba(0,0,0,.1)); color: var(--ink-4, #8a8a86); }
+.channels-card-id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.channels-detail { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding: 20px; }
+.channels-detail .channels-card { max-width: 640px; }
+.channels-intro { color: var(--ink-3, #6b6a66); margin: 0 0 16px; font-size: 13px; }
+.channels-muted { color: var(--ink-4, #8a8a86); font-size: 13px; }
+.channels-card { border: 1px solid var(--border-02, rgba(0,0,0,.1)); border-radius: 12px; padding: 16px; background: var(--bg-a, transparent); }
+.channels-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.channels-card-head h2 { font-size: 14px; font-weight: 600; margin: 0; }
+.channels-type { font-family: var(--font-mono, monospace); font-size: 11px; color: var(--ink-4, #8a8a86); }
+.channels-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+/* LED-style status dot; colour comes from the badge text unless overridden. */
+.channels-led { width: 7px; height: 7px; border-radius: 99px; flex: 0 0 auto; background: currentColor; }
+
+/* Active — live ingress: green with a glowing LED. */
+.channels-badge-ok { background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+.channels-badge-ok .channels-led {
+  box-shadow: 0 0 6px var(--success-glow), 0 0 0 2px color-mix(in srgb, var(--success) 22%, transparent);
+}
+
+/* Configured — credentials stored: steady green, no glow (set, not necessarily live). */
+.channels-badge-warn { background: color-mix(in srgb, var(--success) 10%, transparent); color: color-mix(in srgb, var(--success) 80%, var(--ink-3, #6b6b6b)); }
+.channels-badge-warn .channels-led { background: var(--success); box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 16%, transparent); }
+
+/* Not connected — inert grey LED. */
+.channels-badge-idle { background: rgba(0,0,0,.06); color: var(--ink-4, #8a8a86); }
+.channels-badge-idle .channels-led { background: var(--ink-4, #8a8a86); }
+.channels-agent { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 0 16px; }
+.channels-agent-label { font-size: 12px; font-weight: 600; color: var(--fg); }
+/* Segmented tab control for picking the channel agent. */
+.channels-agent-tabs { display: inline-flex; gap: 2px; padding: 2px; border-radius: 9px; background: color-mix(in srgb, var(--fg) 6%, transparent); border: 1px solid var(--border-subtle, rgba(0,0,0,.1)); }
+.channels-agent-tab {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  color: var(--ink-3, #6b6b6b); font: inherit; font-size: 12px; font-weight: 500;
+  text-transform: capitalize; padding: 4px 14px; border-radius: 7px;
+  transition: background .12s ease, color .12s ease;
+}
+.channels-agent-tab:hover:not(.is-active):not(:disabled) { color: var(--fg); background: color-mix(in srgb, var(--fg) 6%, transparent); }
+.channels-agent-tab.is-active { background: var(--accent, #1a1916); color: var(--accent-fg, #fff); }
+.channels-agent-tab:disabled { cursor: default; opacity: .65; }
+.channels-agent-hint { font-size: 11px; color: var(--ink-4, #8a8a86); }
+
+.channels-fields { display: flex; flex-direction: column; gap: 10px; }
+.channels-field { display: flex; flex-direction: column; gap: 4px; }
+.channels-field-label { font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.channels-req { color: var(--danger, #c0392b); font-style: normal; }
+.channels-set { font-size: 10px; padding: 1px 6px; border-radius: 999px; background: rgba(0,0,0,.06); color: var(--ink-4, #8a8a86); }
+.channels-input { padding: 7px 10px; border: 1px solid var(--border-02, rgba(0,0,0,.12)); border-radius: 8px; background: var(--bg, #fff); color: var(--fg); font-size: 13px; }
+.channels-input:focus { outline: none; border-color: var(--accent, #3a7bd5); }
+.channels-hook { font-size: 12px; color: var(--ink-3, #6b6a66); margin: 12px 0 0; }
+.channels-hook code { font-family: var(--font-mono, monospace); font-size: 11px; word-break: break-all; }
+.channels-note { font-size: 12px; color: var(--ink-4, #8a8a86); margin: 8px 0 0; }
+.channels-error { font-size: 12px; color: var(--danger, #c0392b); margin: 10px 0 0; }
+.channels-notice { font-size: 12px; color: var(--accent-strong, #1f8a4c); margin: 10px 0 0; }
+.channels-actions { display: flex; gap: 8px; margin-top: 14px; }
+.channels-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border-02, rgba(0,0,0,.12)); font-size: 13px; cursor: pointer; background: transparent; color: var(--fg); }
+.channels-btn:disabled { opacity: .7; cursor: not-allowed; }
+.channels-btn-primary { background: var(--accent, #1a1916); color: var(--accent-fg, #fff); border-color: transparent; }
+.channels-btn-ghost { background: transparent; }
+
+/* Channel routes (bindings) */
+.channels-routes { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border-subtle, rgba(0,0,0,.08)); }
+.channels-routes-title { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+.channels-route-add { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 16px; }
+.channels-route-add .channels-input { flex: 1 1 140px; min-width: 120px; }
+.channels-route-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.channels-route-table th { text-align: left; font-weight: 500; color: var(--ink-4, #8a8a86); font-size: 11px; padding: 4px 8px; }
+.channels-route-table td { padding: 6px 8px; border-top: 1px solid var(--border-subtle, rgba(0,0,0,.06)); vertical-align: top; }
+.channels-input-sm { padding: 5px 8px; font-size: 12px; width: 100%; }
+.channels-route-actions { display: flex; gap: 6px; white-space: nowrap; }
+.channels-btn-sm { padding: 5px 10px; font-size: 12px; }

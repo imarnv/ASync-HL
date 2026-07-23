@@ -1,0 +1,831 @@
+import io
+import json
+import os
+import sys
+import traceback
+
+import dill
+
+from anton.core.backends.wire import (
+    CELL_DELIM,
+    RESULT_START,
+    RESULT_END,
+)
+
+
+# --- Python session persistence and namespace injection ---
+PERSIST_SESSION = os.environ.get("ANTON_SCRATCHPAD_PERSIST_SESSION", "false").lower() in {"1", "true", "yes", "on"}
+SESSION_PATH = os.environ.get("ANTON_SCRATCHPAD_SESSION_PATH", "/anton_scratchpad_session.pkl")
+
+
+def _load_namespace() -> tuple[dict, str | None]:
+    if not PERSIST_SESSION:
+        return {"__builtins__": __builtins__}, None
+    try:
+        with open(SESSION_PATH, "rb") as f:
+            ns = dill.load(f)
+        if not isinstance(ns, dict):
+            raise TypeError("Session file did not contain a namespace dict")
+        ns.setdefault("__builtins__", __builtins__)
+        return ns, None
+    except FileNotFoundError:
+        return {"__builtins__": __builtins__}, None
+    except Exception:
+        return (
+            {"__builtins__": __builtins__},
+            "Failed to load scratchpad session; starting fresh.\n" + traceback.format_exc(),
+        )
+
+
+def _dump_namespace(ns: dict) -> str | None:
+    if not PERSIST_SESSION:
+        return None
+    try:
+        with open(SESSION_PATH, "wb") as f:
+            dill.dump(ns, f)
+        return None
+    except Exception:
+        return "Failed to dump scratchpad session.\n" + traceback.format_exc()
+
+
+# Persistent namespace across cells
+namespace, _ = _load_namespace()
+namespace["_anton_explainability_queries"] = []
+
+# --- Inject get_llm() for LLM access from scratchpad code ---
+_scratchpad_model = os.environ.get("ANTON_SCRATCHPAD_MODEL", "")
+if _scratchpad_model:
+    try:
+        import asyncio as _llm_asyncio
+
+        _scratchpad_provider_name = os.environ.get(
+            "ANTON_SCRATCHPAD_PROVIDER", "anthropic"
+        )
+        if _scratchpad_provider_name in ("openai", "openai-compatible"):
+            from anton.core.llm.openai import OpenAIProvider as _ProviderClass
+        else:
+            from anton.core.llm.anthropic import AnthropicProvider as _ProviderClass
+
+        _llm_ssl_verify = (
+            os.environ.get("ANTON_MINDS_SSL_VERIFY", "true").lower() != "false"
+        )
+        if _scratchpad_provider_name in ("openai", "openai-compatible"):
+            # Explicitly pass base_url so Minds/openai-compatible endpoints work.
+            # The OpenAI SDK may or may not pick up OPENAI_BASE_URL from env,
+            # so we pass it directly to be safe.
+            _llm_base_url = os.environ.get("OPENAI_BASE_URL") or os.environ.get(
+                "ANTON_OPENAI_BASE_URL"
+            )
+            _llm_api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get(
+                "ANTON_OPENAI_API_KEY"
+            )
+            _llm_api_version = os.environ.get("ANTON_OPENAI_API_VERSION") or None
+            # Mirror LLMClient.from_settings: openai-compatible endpoints
+            # (Minds/MindsHub) expect image blocks in Anthropic native format,
+            # not OpenAI image_url data-URLs.
+            _llm_provider_kwargs: dict = {
+                "api_key": _llm_api_key or None,
+                "base_url": _llm_base_url or None,
+                "ssl_verify": _llm_ssl_verify,
+                "api_version": _llm_api_version,
+            }
+            # Endpoints that proxy to Minds / MindsHub / MDB.AI
+            # speak Anthropic content format over the OpenAI HTTP envelope,
+            # so image blocks must be Anthropic-shaped, not OpenAI image_url.
+            _llm_url_lower = (_llm_base_url or "").lower()
+            _anthropic_proxy = any(
+                host in _llm_url_lower for host in ("mdb.ai", "mindshub.ai")
+            )
+            if _scratchpad_provider_name == "openai-compatible" or _anthropic_proxy:
+                _llm_provider_kwargs["supports_vision"] = True
+                _llm_provider_kwargs["vision_format"] = "anthropic"
+            # Resolve the OpenAI "flavor" so the injected web_search() helper can
+            # route through whatever native web tooling the endpoint exposes.
+            # Mirrors LLMClient._resolve_openai_compatible_flavor: direct OpenAI
+            # BYOK uses the Responses API (web_search); an openai-compatible base
+            # URL pointing at Minds/mdb.ai uses the chat.completions passthrough;
+            # any other openai-compatible endpoint is generic (no native search).
+            if _scratchpad_provider_name == "openai":
+                _llm_provider_kwargs["flavor"] = _ProviderClass.FLAVOR_OPENAI
+            else:
+                _minds_url_norm = (
+                    os.environ.get("ANTON_MINDS_URL", "").rstrip("/").lower()
+                )
+                _base_norm = (_llm_base_url or "").rstrip("/").lower()
+                if _minds_url_norm and _base_norm in (
+                    _minds_url_norm,
+                    f"{_minds_url_norm}/api/v1",
+                ):
+                    _llm_provider_kwargs["flavor"] = (
+                        _ProviderClass.FLAVOR_MINDS_PASSTHROUGH
+                    )
+                else:
+                    _llm_provider_kwargs["flavor"] = (
+                        _ProviderClass.FLAVOR_OPENAI_COMPATIBLE_GENERIC
+                    )
+            _llm_provider = _ProviderClass(**_llm_provider_kwargs)
+        else:
+            _llm_provider = _ProviderClass()  # Anthropic doesn't need ssl_verify
+        _llm_model = _scratchpad_model
+
+        _LLM_HEARTBEAT_INTERVAL = 10  # seconds between heartbeats during LLM calls
+
+        async def _run_with_heartbeat(coro):
+            """Run an async coroutine while emitting progress heartbeats.
+
+            LLM API calls can block for 30s+.  Without heartbeats, the
+            scratchpad inactivity timeout (30s) kills the process.  This
+            wrapper runs a heartbeat task alongside the real work.
+            """
+
+            async def _heartbeat():
+                elapsed = 0
+                while True:
+                    await _llm_asyncio.sleep(_LLM_HEARTBEAT_INTERVAL)
+                    elapsed += _LLM_HEARTBEAT_INTERVAL
+                    _real_stdout.write(
+                        PROGRESS_MARKER + f" Waiting for LLM… ({elapsed}s)\n"
+                    )
+                    _real_stdout.flush()
+
+            beat = _llm_asyncio.create_task(_heartbeat())
+            try:
+                return await coro
+            finally:
+                beat.cancel()
+                try:
+                    await beat
+                except _llm_asyncio.CancelledError:
+                    pass
+
+        class _ScratchpadLLM:
+            """Sync LLM wrapper for scratchpad use. Mirrors SkillLLM interface."""
+
+            @property
+            def model(self):
+                return _llm_model
+
+            def complete(
+                self, *, system, messages, tools=None, tool_choice=None, max_tokens=4096
+            ):
+                """Call the LLM synchronously. Returns an LLMResponse.
+
+                Automatically emits progress heartbeats every 10s so that
+                long API calls don't trip the scratchpad inactivity timeout.
+                """
+                return _llm_asyncio.run(
+                    _run_with_heartbeat(
+                        _llm_provider.complete(
+                            model=_llm_model,
+                            system=system,
+                            messages=messages,
+                            tools=tools,
+                            tool_choice=tool_choice,
+                            max_tokens=max_tokens,
+                        )
+                    )
+                )
+
+            async def complete_async(
+                self, *, system, messages, tools=None, tool_choice=None, max_tokens=4096
+            ):
+                """Call the LLM asynchronously. Returns an LLMResponse.
+
+                Use this inside async code (e.g. asyncio.gather) for concurrent
+                LLM calls.  Emits heartbeats automatically like complete().
+                """
+                return await _run_with_heartbeat(
+                    _llm_provider.complete(
+                        model=_llm_model,
+                        system=system,
+                        messages=messages,
+                        tools=tools,
+                        tool_choice=tool_choice,
+                        max_tokens=max_tokens,
+                    )
+                )
+
+            def generate_object(
+                self, schema_class, *, system, messages, max_tokens=4096
+            ):
+                """Generate a structured object matching a Pydantic model.
+
+                Uses tool_choice to force the LLM to return structured data.
+                Supports single models and list[Model].
+
+                The schema-building and unwrapping logic is shared with
+                `LLMClient.generate_object` (in the main process) via
+                `anton.core.llm.structured` — only the actual provider
+                call differs between the two runtime contexts (sync
+                subprocess here, async planning there).
+
+                Args:
+                    schema_class: A Pydantic BaseModel subclass, or list[Model].
+                    system: System prompt.
+                    messages: Conversation messages.
+                    max_tokens: Max tokens for the LLM call.
+
+                Returns:
+                    An instance of schema_class (or a list of instances).
+                """
+                from anton.core.llm.structured import (
+                    build_structured_tool,
+                    unwrap_structured_response,
+                )
+
+                tool, validator_class, is_list = build_structured_tool(
+                    schema_class
+                )
+
+                response = self.complete(
+                    system=system,
+                    messages=messages,
+                    tools=[tool],
+                    tool_choice={"type": "tool", "name": tool["name"]},
+                    max_tokens=max_tokens,
+                )
+
+                if not response.tool_calls:
+                    raise ValueError("LLM did not return structured output.")
+
+                return unwrap_structured_response(
+                    response.tool_calls[0].input, validator_class, is_list
+                )
+
+        _scratchpad_llm_instance = _ScratchpadLLM()
+
+        def get_llm():
+            """Get a pre-configured LLM client. No API keys needed."""
+            return _scratchpad_llm_instance
+
+        def agentic_loop(
+            *, system, user_message, tools, handle_tool, max_turns=10, max_tokens=4096
+        ):
+            """Run a synchronous LLM tool-call loop.
+
+            The LLM reasons, calls tools via handle_tool(name, inputs) -> str,
+            and iterates until it produces a final text response.
+
+            Args:
+                system: System prompt for the LLM.
+                user_message: Initial user message.
+                tools: Tool definitions (Anthropic tool schema format).
+                handle_tool: Callback (tool_name, tool_input) -> result_string.
+                max_turns: Safety limit on LLM round-trips (default 10).
+                max_tokens: Max tokens per LLM call.
+
+            Returns:
+                The final text response from the LLM.
+            """
+            llm = get_llm()
+            messages = [{"role": "user", "content": user_message}]
+
+            response = None
+            for _ in range(max_turns):
+                response = llm.complete(
+                    system=system,
+                    messages=messages,
+                    tools=tools,
+                    max_tokens=max_tokens,
+                )
+
+                if not response.tool_calls:
+                    return response.content
+
+                # Build assistant message with text + tool_use blocks
+                assistant_content = []
+                if response.content:
+                    assistant_content.append({"type": "text", "text": response.content})
+                for tc in response.tool_calls:
+                    assistant_content.append(
+                        {
+                            "type": "tool_use",
+                            "id": tc.id,
+                            "name": tc.name,
+                            "input": tc.input,
+                        }
+                    )
+                messages.append({"role": "assistant", "content": assistant_content})
+
+                # Execute each tool and collect results
+                tool_results = []
+                for tc in response.tool_calls:
+                    try:
+                        result = handle_tool(tc.name, tc.input)
+                    except Exception as exc:
+                        result = f"Error: {exc}"
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": tc.id,
+                            "content": result,
+                        }
+                    )
+                messages.append({"role": "user", "content": tool_results})
+
+            # Hit max_turns
+            return response.content if response else ""
+
+        _WEB_SEARCH_SYSTEM = (
+            "You are a web research assistant. Use your web search tool to find "
+            "current, accurate information and answer the user's query directly "
+            "and thoroughly. Prefer recent, reputable sources, and cite the source "
+            "URLs you relied on inline or in a short list at the end."
+        )
+
+        def web_search(query, *, max_tokens=4096):
+            """Answer a query using the configured LLM's native web search.
+
+            Routes ``query`` to a single LLM completion with the provider's
+            server-side web search tool enabled — Anthropic ``web_search``,
+            OpenAI (BYOK) Responses-API ``web_search``, or the Minds Cloud /
+            mdb.ai passthrough, depending on the configured provider. The model
+            performs the search server-side and writes the answer in one round
+            trip; this returns that narrative answer (a string), which usually
+            includes the source links the model cited.
+
+            If the configured provider/endpoint exposes no native web search
+            (e.g. a generic OpenAI-compatible endpoint), a short explanatory
+            message is returned instead of raising.
+            """
+            available = _llm_provider.native_web_tools()
+            if "web_search" not in available:
+                return (
+                    "web_search is unavailable: the configured LLM "
+                    "provider/endpoint does not expose a native web search tool. "
+                    "Native web search is available on Anthropic, OpenAI (BYOK), "
+                    "and Minds Cloud (mdb.ai)."
+                )
+            response = _llm_asyncio.run(
+                _run_with_heartbeat(
+                    _llm_provider.complete(
+                        model=_llm_model,
+                        system=_WEB_SEARCH_SYSTEM,
+                        messages=[{"role": "user", "content": query}],
+                        native_web_tools=available & {"web_search", "web_fetch"},
+                        max_tokens=max_tokens,
+                    )
+                )
+            )
+            return response.content
+
+        namespace["get_llm"] = get_llm
+        namespace["agentic_loop"] = agentic_loop
+        namespace["web_search"] = web_search
+    except Exception:
+        pass  # LLM not available — not fatal (e.g. anthropic not installed)
+
+# --- Inject query_minds_data() for Minds datasource access from scratchpad ---
+_minds_datasource = os.environ.get("ANTON_MINDS_DATASOURCE", "")
+_minds_api_key = os.environ.get("ANTON_MINDS_API_KEY", "")
+_minds_url = os.environ.get("ANTON_MINDS_URL", "")
+_minds_engine = os.environ.get("ANTON_MINDS_DATASOURCE_ENGINE", "")
+if _minds_datasource and _minds_api_key and _minds_url:
+    try:
+        import ssl as _minds_ssl
+        import urllib.request as _minds_urllib
+
+        _minds_ssl_verify = (
+            os.environ.get("ANTON_MINDS_SSL_VERIFY", "true").lower() != "false"
+        )
+
+        def query_minds_data(query, datasource=None):
+            """Query a Minds datasource with SQL. Returns dict with type, data, column_names, error_message."""
+            ds = datasource or _minds_datasource
+            url = f"{_minds_url}/api/v1/datasources/{ds}/query"
+            payload = json.dumps({"query": query, "native_query": True}).encode()
+
+            req = _minds_urllib.Request(url, data=payload, method="POST")
+            req.add_header("Authorization", f"Bearer {_minds_api_key}")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("Accept", "application/json")
+            req.add_header(
+                "User-Agent",
+                "Mozilla/5.0 (compatible; Anton/1.0; +https://github.com/mindsdb/anton)",
+            )
+            req.add_header("Accept-Language", "en-US,en;q=0.9")
+            req.add_header("Accept-Encoding", "identity")
+            req.add_header("Connection", "keep-alive")
+
+            ctx = None
+            if not _minds_ssl_verify:
+                ctx = _minds_ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = _minds_ssl.CERT_NONE
+
+            try:
+                with _minds_urllib.urlopen(req, context=ctx, timeout=60) as resp:
+                    parsed = json.loads(resp.read().decode())
+                    namespace.setdefault("_anton_explainability_queries", []).append({
+                        "datasource": ds,
+                        "sql": query,
+                        "engine": _minds_engine or None,
+                        "status": "ok",
+                        "error_message": None,
+                    })
+                    return parsed
+            except _minds_urllib.HTTPError as e:
+                body = ""
+                try:
+                    body = e.read().decode()
+                except Exception:
+                    pass
+                namespace.setdefault("_anton_explainability_queries", []).append({
+                    "datasource": ds,
+                    "sql": query,
+                    "engine": _minds_engine or None,
+                    "status": "error",
+                    "error_message": f"HTTP {e.code}: {body or e.reason}",
+                })
+                return {
+                    "type": "error",
+                    "data": None,
+                    "column_names": None,
+                    "error_message": f"HTTP {e.code}: {body or e.reason}",
+                }
+            except Exception as e:
+                namespace.setdefault("_anton_explainability_queries", []).append({
+                    "datasource": ds,
+                    "sql": query,
+                    "engine": _minds_engine or None,
+                    "status": "error",
+                    "error_message": str(e),
+                })
+                return {
+                    "type": "error",
+                    "data": None,
+                    "column_names": None,
+                    "error_message": str(e),
+                }
+
+        namespace["query_minds_data"] = query_minds_data
+    except Exception:
+        pass  # Minds query not available — not fatal
+
+# Read-execute loop
+_real_stdout = sys.stdout
+_real_stdin = sys.stdin
+
+from anton.core.backends.wire import PROGRESS_MARKER
+
+_MAX_OUTPUT = 10_000
+
+
+def progress(message=""):
+    """Signal that long-running work is still active. Resets the inactivity timer."""
+    _real_stdout.write(PROGRESS_MARKER + " " + str(message) + "\n")
+    _real_stdout.flush()
+
+
+namespace["progress"] = progress
+
+
+def sample(var, mode="preview", _name=None):
+    """Inspect a variable with type-aware formatting.
+
+    Args:
+        var: The variable to inspect.
+        mode: "preview" (default) — compact summary. "full" — complete dump.
+        _name: Optional label printed as header (auto-detected when possible).
+
+    Prints formatted output to stdout (captured by the cell).
+    """
+    _MAX_PREVIEW = 2000
+    _MAX_FULL = 10000
+    limit = _MAX_PREVIEW if mode == "preview" else _MAX_FULL
+
+    header = f"[sample:{type(var).__name__}]"
+    if _name:
+        header = f"[sample:{_name} ({type(var).__name__})]"
+
+    lines = [header]
+
+    try:
+        import pandas as _pd
+
+        if isinstance(var, _pd.DataFrame):
+            lines.append(f"Shape: {var.shape[0]} rows x {var.shape[1]} cols")
+            lines.append(f"Columns: {list(var.columns)}")
+            lines.append(f"Dtypes:\n{var.dtypes.to_string()}")
+            if mode == "preview":
+                lines.append(f"\nHead (5 rows):\n{var.head().to_string()}")
+                if var.shape[0] > 5:
+                    lines.append(f"\nTail (3 rows):\n{var.tail(3).to_string()}")
+                nulls = var.isnull().sum()
+                nulls = nulls[nulls > 0]
+                if len(nulls) > 0:
+                    lines.append(f"\nNull counts:\n{nulls.to_string()}")
+            else:
+                lines.append(f"\nDescribe:\n{var.describe(include='all').to_string()}")
+                n = min(50, var.shape[0])
+                lines.append(f"\nFirst {n} rows:\n{var.head(n).to_string()}")
+                nulls = var.isnull().sum()
+                nulls = nulls[nulls > 0]
+                if len(nulls) > 0:
+                    lines.append(f"\nNull counts:\n{nulls.to_string()}")
+            print(_truncate_sample("\n".join(lines), limit))
+            return
+
+        if isinstance(var, _pd.Series):
+            lines.append(f"Length: {len(var)}, Dtype: {var.dtype}, Name: {var.name}")
+            if mode == "preview":
+                lines.append(f"\nHead (10):\n{var.head(10).to_string()}")
+            else:
+                lines.append(f"\nDescribe:\n{var.describe().to_string()}")
+                n = min(50, len(var))
+                lines.append(f"\nFirst {n}:\n{var.head(n).to_string()}")
+            print(_truncate_sample("\n".join(lines), limit))
+            return
+    except ImportError:
+        pass
+
+    try:
+        import numpy as _np
+
+        if isinstance(var, _np.ndarray):
+            lines.append(f"Shape: {var.shape}, Dtype: {var.dtype}")
+            if mode == "preview":
+                flat = var.flatten()
+                n = min(10, len(flat))
+                lines.append(f"First {n} values: {flat[:n].tolist()}")
+                if len(flat) > 10:
+                    lines.append(f"Last 3 values: {flat[-3:].tolist()}")
+                lines.append(
+                    f"Min: {var.min()}, Max: {var.max()}, Mean: {var.mean():.4g}"
+                )
+            else:
+                lines.append(
+                    f"Min: {var.min()}, Max: {var.max()}, Mean: {var.mean():.4g}, Std: {var.std():.4g}"
+                )
+                lines.append(f"\n{repr(var)}")
+            print(_truncate_sample("\n".join(lines), limit))
+            return
+    except ImportError:
+        pass
+
+    if isinstance(var, dict):
+        lines.append(f"Keys ({len(var)}): {list(var.keys())[:20]}")
+        if len(var) > 20:
+            lines[-1] += f" ... (+{len(var) - 20} more)"
+        if mode == "preview":
+            for i, (k, v) in enumerate(var.items()):
+                if i >= 10:
+                    lines.append(f"  ... ({len(var) - 10} more entries)")
+                    break
+                val_repr = repr(v)
+                if len(val_repr) > 120:
+                    val_repr = val_repr[:120] + "..."
+                lines.append(f"  {k!r}: {val_repr}")
+        else:
+            import json as _json
+
+            try:
+                lines.append(_json.dumps(var, indent=2, default=str))
+            except (TypeError, ValueError):
+                lines.append(repr(var))
+        print(_truncate_sample("\n".join(lines), limit))
+        return
+
+    if isinstance(var, (list, tuple)):
+        kind = type(var).__name__
+        lines.append(f"Length: {len(var)}")
+        if len(var) > 0:
+            lines.append(
+                f"Item types: {type(var[0]).__name__}"
+                + (
+                    f" (mixed)"
+                    if len(var) > 1 and type(var[0]) != type(var[-1])
+                    else ""
+                )
+            )
+        if mode == "preview":
+            n = min(5, len(var))
+            for i in range(n):
+                val_repr = repr(var[i])
+                if len(val_repr) > 200:
+                    val_repr = val_repr[:200] + "..."
+                lines.append(f"  [{i}] {val_repr}")
+            if len(var) > 5:
+                lines.append(f"  ... ({len(var) - 5} more)")
+                val_repr = repr(var[-1])
+                if len(val_repr) > 200:
+                    val_repr = val_repr[:200] + "..."
+                lines.append(f"  [{len(var) - 1}] {val_repr}")
+        else:
+            for i, item in enumerate(var):
+                val_repr = repr(item)
+                if len(val_repr) > 500:
+                    val_repr = val_repr[:500] + "..."
+                lines.append(f"  [{i}] {val_repr}")
+        print(_truncate_sample("\n".join(lines), limit))
+        return
+
+    if isinstance(var, (set, frozenset)):
+        lines.append(f"Length: {len(var)}")
+        items = sorted(var, key=repr)
+        if mode == "preview":
+            for item in items[:10]:
+                lines.append(f"  {repr(item)}")
+            if len(items) > 10:
+                lines.append(f"  ... ({len(items) - 10} more)")
+        else:
+            for item in items:
+                lines.append(f"  {repr(item)}")
+        print(_truncate_sample("\n".join(lines), limit))
+        return
+
+    if isinstance(var, str):
+        lines.append(f"Length: {len(var)}")
+        if mode == "preview":
+            preview = var[:500]
+            if len(var) > 500:
+                preview += f"\n... ({len(var) - 500} more chars)"
+            lines.append(preview)
+        else:
+            lines.append(var)
+        print(_truncate_sample("\n".join(lines), limit))
+        return
+
+    if isinstance(var, bytes):
+        lines.append(f"Length: {len(var)} bytes")
+        if mode == "preview":
+            lines.append(repr(var[:200]))
+            if len(var) > 200:
+                lines.append(f"... ({len(var) - 200} more bytes)")
+        else:
+            lines.append(repr(var))
+        print(_truncate_sample("\n".join(lines), limit))
+        return
+
+    lines.append(f"Type: {type(var).__module__}.{type(var).__qualname__}")
+    # Show public attributes
+    attrs = [a for a in dir(var) if not a.startswith("_")]
+    if attrs:
+        lines.append(f"Attributes ({len(attrs)}): {attrs[:20]}")
+        if len(attrs) > 20:
+            lines[-1] += f" ... (+{len(attrs) - 20} more)"
+    r = repr(var)
+    if mode == "preview" and len(r) > 500:
+        r = r[:500] + "..."
+    lines.append(f"Repr: {r}")
+    print(_truncate_sample("\n".join(lines), limit))
+
+
+def _truncate_sample(text, max_chars):
+    """Truncate sample output to max_chars."""
+    if len(text) <= max_chars:
+        return text
+    return text[:max_chars] + f"\n... (truncated, {len(text)} chars total)"
+
+
+namespace["sample"] = sample
+
+# --- Logging capture ---
+# Libraries like httpx, urllib3, etc. use Python logging. By default these
+# messages are silently dropped (no handler configured). We set up a handler
+# that writes to a per-cell StringIO so the LLM can see connection info,
+# warnings, and errors from libraries.
+import logging as _logging
+
+
+class _CellLogHandler(_logging.Handler):
+    """Logging handler that writes to whichever StringIO is current."""
+
+    def __init__(self):
+        super().__init__(level=_logging.INFO)
+        self.buf = None
+        self.setFormatter(_logging.Formatter("%(name)s: %(message)s"))
+
+    def emit(self, record):
+        if self.buf is not None:
+            try:
+                self.buf.write(self.format(record) + "\n")
+            except Exception:
+                pass
+
+
+_cell_log_handler = _CellLogHandler()
+_logging.root.addHandler(_cell_log_handler)
+_logging.root.setLevel(_logging.INFO)
+
+while True:
+    lines = []
+    eof = False
+    try:
+        # Use explicit readline() instead of iterating stdin.  On Windows,
+        # Python's file iterator over a pipe uses internal block buffering
+        # (~8 KB) and won't yield lines until the buffer fills or the pipe
+        # closes — causing a deadlock.  readline() returns immediately on \n.
+        while True:
+            line = _real_stdin.readline()
+            if not line:
+                # EOF — parent closed stdin
+                eof = True
+                break
+            stripped = line.rstrip("\r\n")
+            if stripped == CELL_DELIM:
+                break
+            lines.append(line)
+    except EOFError:
+        eof = True
+    if eof:
+        break
+
+    code = "".join(lines)
+    if not code.strip():
+        result = {"stdout": "", "stderr": "", "logs": "", "error": None}
+        _real_stdout.write(RESULT_START + "\n")
+        _real_stdout.write(json.dumps(result) + "\n")
+        _real_stdout.write(RESULT_END + "\n")
+        _real_stdout.flush()
+        continue
+
+    out_buf = io.StringIO()
+    err_buf = io.StringIO()
+    log_buf = io.StringIO()
+    error = None
+    namespace["_anton_explainability_queries"] = []
+    _cell_log_handler.buf = log_buf
+
+    sys.stdout = out_buf
+    sys.stderr = err_buf
+    _auto_installed = []
+    try:
+        compiled = compile(code, "<scratchpad>", "exec")
+        exec(compiled, namespace)
+    except ModuleNotFoundError as _mnf:
+        # Auto-install the missing module and retry the cell once
+        _missing = _mnf.name
+        if _missing:
+            sys.stdout = _real_stdout
+            sys.stderr = sys.__stderr__
+            _cell_log_handler.buf = None
+            _real_stdout.write(
+                PROGRESS_MARKER + " " + f"Installing {_missing}..." + "\n"
+            )
+            _real_stdout.flush()
+            import subprocess as _sp
+
+            _uv_path = os.environ.get("ANTON_UV_PATH", "")
+            if _uv_path:
+                _pip = _sp.run(
+                    [_uv_path, "pip", "install", "--python", sys.executable, _missing],
+                    capture_output=True,
+                    timeout=120,
+                )
+            else:
+                _pip = _sp.run(
+                    [sys.executable, "-m", "pip", "install", _missing],
+                    capture_output=True,
+                    timeout=120,
+                )
+            # Reset buffers and retry
+            out_buf = io.StringIO()
+            err_buf = io.StringIO()
+            log_buf = io.StringIO()
+            _cell_log_handler.buf = log_buf
+            sys.stdout = out_buf
+            sys.stderr = err_buf
+            if _pip.returncode == 0:
+                _auto_installed.append(_missing)
+                try:
+                    exec(compiled, namespace)
+                except Exception:
+                    error = traceback.format_exc()
+            else:
+                error = (
+                    f"ModuleNotFoundError: No module named '{_missing}'\n"
+                    f"Auto-install failed:\n{_pip.stderr.decode()}"
+                )
+        else:
+            error = traceback.format_exc()
+    except Exception:
+        error = traceback.format_exc()
+    finally:
+        sys.stdout = _real_stdout
+        sys.stderr = sys.__stderr__
+        _cell_log_handler.buf = None
+
+    stdout_val = out_buf.getvalue()
+    if len(stdout_val) > _MAX_OUTPUT:
+        stdout_val = (
+            stdout_val[:_MAX_OUTPUT]
+            + f"\n\n... (truncated, {len(stdout_val)} chars total)"
+        )
+
+    # Persist session after each cell.
+    _dump_namespace(namespace)
+
+    result = {
+        "stdout": stdout_val,
+        "stderr": err_buf.getvalue(),
+        "logs": log_buf.getvalue(),
+        "error": error,
+        "explainability_queries": list(namespace.get("_anton_explainability_queries", [])),
+    }
+    if _auto_installed:
+        result["auto_installed"] = _auto_installed
+    _real_stdout.write(RESULT_START + "\n")
+    _real_stdout.write(json.dumps(result) + "\n")
+    _real_stdout.write(RESULT_END + "\n")
+    _real_stdout.flush()

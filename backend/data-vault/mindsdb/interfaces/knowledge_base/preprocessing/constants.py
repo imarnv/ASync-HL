@@ -1,0 +1,4 @@
+# Limits for web crawling
+DEFAULT_CRAWL_DEPTH = None
+DEFAULT_WEB_CRAWL_LIMIT = 1
+DEFAULT_WEB_FILTERS = []

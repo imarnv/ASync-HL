@@ -1,0 +1,1845 @@
+// API client — talks to the FastAPI backend at /v1/*.
+// Port matches antontron's server-process default (26866 = ANTON on T9
+// keypad). Vite dev would proxy /v1 → backend; packaged Electron runs
+// from file:// or app:// and must address the loopback server directly.
+
+import { initialStreamState, reduceStream } from './lib/responseStreamAdapter';
+import { host } from '../platform/host';
+import { transformSettingsRows, diffSettingsForWrite } from './lib/settingsTransform';
+
+const ANTON_SERVER_PORT = 26866;
+
+const API_ORIGIN = (() => {
+  if (typeof window === 'undefined') return '';
+  const protocol = window.location?.protocol;
+  return protocol === 'file:' || protocol === 'app:'
+    ? `http://127.0.0.1:${ANTON_SERVER_PORT}`
+    : '';
+})();
+
+export const BASE = `${API_ORIGIN}/api/v1`;
+const ROOT_BASE = `${API_ORIGIN}`;
+
+async function req(path, options = {}) {
+  const res = await fetch(BASE + path, {
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    ...options,
+  });
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const data = await res.json();
+      const raw = data?.detail;
+      detail = Array.isArray(raw)
+        ? raw.map((e) => e.msg || JSON.stringify(e)).join(', ')
+        : (raw || data?.message || '');
+    } catch {
+      detail = await res.text().catch(() => '');
+    }
+    const err = new Error(detail || `API ${path} returned ${res.status}`);
+    err.status = res.status;  // let callers branch on the HTTP code (e.g. 404 fallbacks)
+    throw err;
+  }
+  if (res.status === 204) return { ok: true };
+  return res.json();
+}
+
+async function rootReq(path, options = {}) {
+  const res = await fetch(ROOT_BASE + path, {
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    ...options,
+  });
+  if (!res.ok) {
+    throw new Error(`API ${path} returned ${res.status}`);
+  }
+  if (res.status === 204) return { ok: true };
+  return res.json();
+}
+
+// In-flight single-flight cache. When several call sites ask for
+// the same endpoint at the same time (e.g. WorkingFolderLive and
+// ContextCard both mounting at once and both calling
+// `listProjectFiles(name)`, or the projects list view fanning N
+// rows that all want `fetchArtifacts`), we collapse the duplicates
+// into one network request and share its promise.
+//
+// Behaviour:
+//   - First caller for a given key starts the request.
+//   - Concurrent callers receive the SAME promise.
+//   - Once the promise settles (resolve or reject) the entry is
+//     deleted so the next call will re-fetch — i.e. NO long-lived
+//     cache, just request coalescing within the same tick / async
+//     window. Streaming polls keep working.
+//
+// The keys are constructed by callers; convention is the URL path
+// plus any query params, so different projects never collide.
+const _inflight = new Map();
+function dedupe(key, factory) {
+  const existing = _inflight.get(key);
+  if (existing) return existing;
+  const p = (async () => {
+    try {
+      return await factory();
+    } finally {
+      _inflight.delete(key);
+    }
+  })();
+  _inflight.set(key, p);
+  return p;
+}
+
+async function responseError(res, fallback) {
+  let detail = '';
+  try {
+    const data = await res.json();
+    detail = data?.detail || data?.message || '';
+  } catch {
+    detail = await res.text().catch(() => '');
+  }
+  return new Error(detail || fallback);
+}
+
+// ─── Health ──────────────────────────────────────────────────────────────────
+export async function fetchHealth() {
+  try {
+    return await rootReq('/api/v1/health');
+  } catch {
+    return { status: 'offline', anton_available: false };
+  }
+}
+
+// ─── Conversations (Tasks) ──────────────────────────────────────────────────
+// Cowork's "task" object is the merge of an Anton conversation (id, title,
+// preview, project_path, messages) with cowork-side UI state (pinned,
+// attachments). The shape returned here mirrors what App.jsx already
+// expects so callers don't need to change.
+
+function _humanTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const secs = Math.max(0, Math.floor((Date.now() - d.getTime()) / 1000));
+  if (secs < 60) return 'just now';
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  if (secs < 604800) return `${Math.floor(secs / 86400)} days ago`;
+  return `${Math.floor(secs / 604800)} weeks ago`;
+}
+
+// Replay the server-persisted SSE event log through the live stream
+// reducer to reconstruct `steps` + `startedAt` for each assistant
+// turn. The server saves raw events in a sidecar file and returns
+// them inline on `/conversations/{id}/items`; doing the replay
+// here keeps reducer logic single-source (lib/responseStreamAdapter).
+function _hydrateAssistantEvents(messages) {
+  if (!Array.isArray(messages)) return messages || [];
+  return messages.map((m) => {
+    if (m?.role !== 'assistant') return m;
+    const events = m.events;
+    if (!Array.isArray(events) || events.length === 0) return m;
+    let state = initialStreamState();
+    for (const ev of events) {
+      try { state = reduceStream(state, ev); } catch {}
+    }
+    const { events: _drop, ...rest } = m;
+    if (!state.steps || state.steps.length === 0) return rest;
+    return {
+      ...rest,
+      steps: state.steps,
+      startedAt: rest.startedAt || state.startedAt || null,
+    };
+  });
+}
+
+function _conversationToTask(conv, messages = []) {
+  // Server stores conversations under <project>/.anton/episodes/ and
+  // returns the project NAME on each conversation meta. We carry both:
+  //   projectName — the canonical id from the server
+  //   projectPath — resolved later from the projects list (App.jsx)
+  //
+  // Each assistant message may carry an `events` array — the SSE log
+  // captured server-side for that turn. Replaying it through the live
+  // reducer gives us back `steps` + `startedAt` byte-for-byte. We do
+  // the replay at the api boundary so the rest of the app sees a
+  // consistent message shape regardless of whether the data came from
+  // a fresh stream or a server reload.
+  const rawDisabled = conv.disabled_connections ?? conv.disabledConnections;
+  const disabledConnections = Array.isArray(rawDisabled)
+    ? rawDisabled
+      .filter((x) => x && typeof x.engine === 'string' && typeof x.name === 'string')
+      .map((x) => ({ engine: x.engine.trim(), name: x.name.trim() }))
+    : [];
+
+  return {
+    id: conv.id,
+    title: conv.title || conv.preview || conv.id || 'Untitled task',
+    subtitle: _humanTime(conv.updated_at || conv.created_at),
+    status: 'idle',
+    messages: _hydrateAssistantEvents(messages),
+    projectName: conv.project || null,
+    projectPath: conv.project_path || null,
+    model: null,
+    attachments: [],
+    disabledConnections,
+    pinned: false,
+    // Carry the schedule linkage through so the renderer can group
+    // multiple runs of the same schedule into a single "view all"
+    // row instead of showing each execution as its own task. Set on
+    // conversations created by `_run_schedule`; null for chat-
+    // initiated conversations.
+    scheduledId: conv.scheduled_id || conv.scheduledId || null,
+    updatedAt: conv.updated_at || conv.updatedAt || null,
+    createdAt: conv.created_at || conv.createdAt || null,
+  };
+}
+
+export async function fetchSessions() {
+  try {
+    // Critical: pass `project=all` so we list conversations across
+    // every project, not just the active one. Without this, a task
+    // created in project A vanishes from `tasks` the moment we
+    // refresh while the user is "in" project B (because the server
+    // defaults to the active project's episodes/ dir).
+    const list = await req('/conversations?project=all&limit=200');
+    const conversations = Array.isArray(list?.conversations) ? list.conversations : [];
+    if (conversations.length === 0) return [];
+    // Fan out for the most recent N — full message history isn't
+    // needed for the sidebar/projects-list rendering, but loading
+    // it eagerly for recent ones keeps clicks instant. Older tasks
+    // get an empty messages array; ChatView fetches them on open.
+    const EAGER = 50;
+    const eager = conversations.slice(0, EAGER);
+    const messageBundles = await Promise.all(
+      eager.map((c) =>
+        req(`/conversations/${encodeURIComponent(c.id)}/items`)
+          .then((r) => Array.isArray(r) ? r : [])
+          .catch(() => [])
+      )
+    );
+    const messagesById = new Map(eager.map((c, i) => [c.id, messageBundles[i]]));
+    return conversations.map((c) => _conversationToTask(c, messagesById.get(c.id) || []));
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchSession(id) {
+  try {
+    const [meta, msgs] = await Promise.all([
+      req(`/conversations/${encodeURIComponent(id)}`).catch(() => null),
+      req(`/conversations/${encodeURIComponent(id)}/items`).catch(() => null),
+    ]);
+    if (!meta) return null;
+    return _conversationToTask(meta, Array.isArray(msgs) ? msgs : []);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pre-allocates the id for a conversation that doesn't exist yet, so
+ * attachments can be uploaded against it before the first stream. The
+ * server adopts a client-supplied UUID as the conversation's real id
+ * (ENG-264) — the old timestamp format here predated the DB-backed
+ * server and made it create a different id, stranding the uploads.
+ */
+export function allocateConversationId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  // randomUUID is gated to secure contexts, but getRandomValues isn't —
+  // assemble an RFC-4122 v4 UUID from raw bytes so the server can still
+  // adopt the id (and CodeQL doesn't flag a Math.random in the id flow).
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+  // No crypto at all (not a real Electron/browser case): the server
+  // can't adopt a non-UUID id but re-links the uploads it covers.
+  return `${Date.now().toString(36)}-${(typeof performance !== 'undefined' ? Math.floor(performance.now() * 1e6) : 0).toString(36)}`;
+}
+
+// Streams a /v1/responses request. Maps OpenAI-style typed events to the
+// callback shape the rest of the app already speaks. `conversationId` is
+// optional — omit it to start a new conversation; the caller learns the
+// new id via the first onChunk/onProgress/onDone callback's second arg.
+function _streamResponse(text, { conversationId, projectName, projectPath, model, attachmentIds = [], disabledConnections, onChunk, onProgress, onToolResult, onDone, onError, onEvent } = {}) {
+  const ctrl = new AbortController();
+  (async () => {
+    try {
+      const res = await fetch(`${BASE}/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: text,
+          model: model || null,
+          stream: true,
+          conversation: conversationId || null,
+          // Server's `project` field is a project NAME (folder under
+          // projects_store). Sending project_path is silently ignored —
+          // every conversation would fall back to the active project.
+          project: projectName || null,
+          attachment_ids: attachmentIds,
+          ...(disabledConnections !== undefined
+            ? { disabled_connections: disabledConnections }
+            : {}),
+        }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw await responseError(res, `Response stream failed (${res.status})`);
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buffer = '';
+      let cid = conversationId || null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += dec.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+        for (const block of events) {
+          // Each SSE event is `event: ...\ndata: ...`. Pull out the `data:` line.
+          const dataLine = block.split('\n').find((line) => line.startsWith('data:'));
+          if (!dataLine) continue;
+          const raw = dataLine.slice(5).trim();
+          if (!raw || raw === '[DONE]') continue;
+          let msg;
+          try { msg = JSON.parse(raw); } catch { continue; }
+
+          // Raw passthrough — used by the streamAdapter to build a
+          // structured ThinkingStep[] for the UI. Fires before the
+          // type-specific routing so existing callbacks still work.
+          onEvent?.(msg);
+
+          switch (msg.type) {
+            case 'response.created':
+              cid = msg.conversation_id || msg.response?.id || cid;
+              break;
+            case 'response.output_text.delta':
+              onChunk?.(msg.delta || '', cid);
+              break;
+            case 'response.in_progress': {
+              const role = msg.thought_role || '';
+              if (role === 'thought.scratchpad.result') {
+                onToolResult?.({
+                  type: 'tool_result',
+                  name: msg.tool_name || '',
+                  action: msg.tool_action || '',
+                  content: msg.content || '',
+                }, cid);
+              } else {
+                onProgress?.({
+                  type: 'progress',
+                  phase: msg.phase || role.replace(/^thought\./, '') || 'progress',
+                  message: msg.message || msg.content || '',
+                  etaSeconds: msg.eta_seconds ?? null,
+                  thoughtRole: role,
+                }, cid);
+              }
+              break;
+            }
+            case 'response.completed':
+              onDone?.(cid);
+              return;
+            case 'response.failed':
+              onError?.(msg.error || msg.message || 'The agent failed', { ...msg, code: msg.code });
+              return;
+            default:
+              break;
+          }
+        }
+      }
+      onDone?.(cid);
+    } catch (err) {
+      if (err.name !== 'AbortError') onError?.(err.message);
+    }
+  })();
+  return ctrl;
+}
+
+export function streamNewSession(text, opts = {}) {
+  return _streamResponse(text, opts);
+}
+
+// Phase 2 — reconnect helpers. Built so a tab that mounted on an
+// already-streaming conversation can re-attach without restarting
+// the turn. The cheap probe (`fetchInFlightStatus`) decides whether
+// it's worth opening an SSE; `tailInFlight` reuses the same callback
+// signature as `_streamResponse` so the caller's adapter logic
+// (onChunk / onProgress / onToolResult / onDone / onError / onEvent)
+// is identical between fresh-turn and reconnect paths.
+export async function fetchInFlightStatus(conversationId) {
+  if (!conversationId) return { in_flight: false, has_buffer: false, latest_seq: 0 };
+  try {
+    return await req(`/responses/in-flight?conversation_id=${encodeURIComponent(conversationId)}`);
+  } catch {
+    return { in_flight: false, has_buffer: false, latest_seq: 0 };
+  }
+}
+
+// Cross-client sync feed (Option B). Returns every conversation_id
+// whose producer task is currently running. The renderer mirrors this
+// into a local Set so reconcileTaskMessages can synchronously decide
+// "is this conversation alive on the server right now?" without a
+// per-task probe.
+export async function fetchInFlightList() {
+  try {
+    const res = await req('/responses/in-flight-list');
+    return Array.isArray(res?.in_flight) ? res.in_flight : [];
+  } catch {
+    return [];
+  }
+}
+
+export function tailInFlight(conversationId, {
+  fromSeq = 0,
+  model = 'anton',
+  onChunk, onProgress, onToolResult, onDone, onError, onEvent,
+} = {}) {
+  const ctrl = new AbortController();
+  (async () => {
+    try {
+      const url = `${BASE}/responses/tail?conversation_id=${encodeURIComponent(conversationId)}&from_seq=${fromSeq}&model=${encodeURIComponent(model)}`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'text/event-stream' },
+        signal: ctrl.signal,
+      });
+      if (res.status === 404) {
+        // Buffer's gone — nothing to tail. Treat as a clean no-op so
+        // the caller can fall back to history.
+        onDone?.(conversationId);
+        return;
+      }
+      if (!res.ok) throw await responseError(res, `Tail stream failed (${res.status})`);
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buffer = '';
+      let cid = conversationId;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += dec.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+        for (const block of events) {
+          const dataLine = block.split('\n').find((line) => line.startsWith('data:'));
+          if (!dataLine) continue;
+          const raw = dataLine.slice(5).trim();
+          if (!raw || raw === '[DONE]') continue;
+          let msg;
+          try { msg = JSON.parse(raw); } catch { continue; }
+          onEvent?.(msg);
+          switch (msg.type) {
+            case 'response.created':
+              cid = msg.conversation_id || cid;
+              break;
+            case 'response.output_text.delta':
+              onChunk?.(msg.delta || '', cid);
+              break;
+            case 'response.in_progress': {
+              const role = msg.thought_role || '';
+              if (role === 'thought.scratchpad.result') {
+                onToolResult?.({
+                  type: 'tool_result',
+                  name: msg.tool_name || '',
+                  action: msg.tool_action || '',
+                  content: msg.content || '',
+                }, cid);
+              } else {
+                onProgress?.({
+                  type: 'progress',
+                  phase: msg.phase || role.replace(/^thought\./, '') || 'progress',
+                  message: msg.message || msg.content || '',
+                  etaSeconds: msg.eta_seconds ?? null,
+                  thoughtRole: role,
+                }, cid);
+              }
+              break;
+            }
+            case 'response.completed':
+              onDone?.(cid);
+              return;
+            case 'response.failed':
+              onError?.(msg.error || msg.message || 'The agent failed', { ...msg, code: msg.code });
+              return;
+            default:
+              break;
+          }
+        }
+      }
+      onDone?.(cid);
+    } catch (err) {
+      if (err.name !== 'AbortError') onError?.(err.message);
+    }
+  })();
+  return ctrl;
+}
+
+export function streamMessage(sessionId, text, opts = {}) {
+  // Strip renderer-side temp ids (`tmp-connect-…` from the connector
+  // picker) before they hit the wire — the server has a defensive
+  // guard, but skipping the value here means the server doesn't even
+  // have to consider it, and the `response.created` event carries
+  // the canonical id straight back. The caller's stream consumer
+  // (App.jsx adoptServerId) rewrites the local task in place.
+  const conversationId = sessionId && !String(sessionId).startsWith('tmp-')
+    ? sessionId
+    : null;
+  return _streamResponse(text, { ...opts, conversationId });
+}
+
+// ─── Projects ─────────────────────────────────────────────────────────────────
+// Server returns a flat array of project objects (with id, name, path,
+// is_active). Older servers wrapped in { projects: [...] } — handle both.
+export async function fetchProjects() {
+  try {
+    const data = await req('/projects');
+    if (Array.isArray(data)) return data;
+    return Array.isArray(data?.projects) ? data.projects : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createProject(name) {
+  return req('/projects', { method: 'POST', body: JSON.stringify({ name }) });
+}
+
+// Rename — backed by PATCH /api/v1/projects/{id}. Server moves the
+// project directory and updates internal references; the response is
+// the renamed Project record. Accepts either a project object (with id)
+// or a plain name string for backwards compat.
+export async function renameProject(projectOrName, newName) {
+  const id = projectOrName?.id;
+  if (id) {
+    return req(`/projects/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name: newName }),
+    });
+  }
+  // Fallback: lookup by name from the projects list
+  const projects = await fetchProjects();
+  const match = projects.find((p) => p.name === projectOrName);
+  if (!match?.id) throw new Error(`Project "${projectOrName}" not found`);
+  return req(`/projects/${encodeURIComponent(match.id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name: newName }),
+  });
+}
+
+// Reveal a project's working folder in Finder. Same backend as
+// `revealArtifact` — the endpoint takes any path and dispatches it to
+// the OS's native "show in folder" handler.
+export async function revealProjectInFinder(projectPath) {
+  if (!projectPath) return null;
+  try {
+    return await req('/artifacts/reveal', {
+      method: 'POST',
+      body: JSON.stringify({ path: projectPath }),
+    });
+  } catch {
+    return null;
+  }
+}
+
+// publishArtifact + previewArtifact live further down in this file.
+// We only add the new unpublish endpoint here.
+export async function cancelScratchpad(name) {
+  if (!name) return null;
+  try {
+    return await req('/scratchpad/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  } catch {
+    // 404 = pad already gone, treat as success.
+    return { status: 'gone', name };
+  }
+}
+
+// Phase 3 — explicit cancel of an in-flight LLM turn.
+//
+// Under the new producer/consumer split (Phase 1), aborting the SSE
+// fetch only tears down the consumer; the server-side producer keeps
+// running. The Stop button needs this dedicated signal to actually
+// halt the work.
+//
+// Idempotent: hitting it for an already-finished conversation returns
+// {cancelled: false} rather than failing.
+export async function cancelResponse(conversationId) {
+  if (!conversationId) return null;
+  try {
+    return await req('/responses/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ conversation_id: conversationId }),
+    });
+  } catch {
+    // 404 / network blip — treat as "already done." The local-state
+    // teardown in handleStopStream is the user-visible part anyway.
+    return { cancelled: false, conversation_id: conversationId };
+  }
+}
+
+export async function unpublishArtifact(path) {
+  // Idempotent — server 404 means "no record" which is the desired
+  // end state.
+  const res = await fetch(BASE + `/publish?path=${encodeURIComponent(path)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (res.status === 404) return { status: 'gone' };
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch {}
+    throw new Error(detail || `Unpublish failed (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function deleteArtifact(path) {
+  const res = await fetch(BASE + `/artifacts/?path=${encodeURIComponent(path)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch {}
+    throw new Error(detail || `Delete failed (${res.status})`);
+  }
+  return { status: 'deleted' };
+}
+
+// Delete a project by object (with id) or name string.
+export async function deleteProject(projectOrName) {
+  let id = projectOrName?.id;
+  const name = typeof projectOrName === 'string' ? projectOrName : projectOrName?.name;
+  if (!id) {
+    const projects = await fetchProjects();
+    const match = projects.find((p) => p.name === name);
+    if (!match?.id) return { status: 'gone', name };
+    id = match.id;
+  }
+  // Idempotent: 404 = "already gone" = success.
+  const res = await fetch(BASE + `/projects/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (res.status === 404) return { status: 'gone', name };
+  if (res.status === 204) return { status: 'deleted', name };
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch {}
+    throw new Error(detail || `Delete failed (${res.status})`);
+  }
+  return res.json();
+}
+
+// ── Project files ────────────────────────────────────────────────
+//
+// Most paths are relative to the project root. Project instructions
+// live at ANTON_PROJECT_INSTRUCTIONS_PATH (on disk: `.anton/anton.md`).
+// These helpers wrap routes/projects.py.
+
+const enc = encodeURIComponent;
+
+/** Relative path from project root for project instructions (projects file API). */
+export const ANTON_PROJECT_INSTRUCTIONS_PATH = '.anton/anton.md';
+
+/** True if `relPath` is the canonical instructions file (`.anton/anton.md`). */
+export function isProjectInstructionsPath(relPath) {
+  const r = String(relPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  return r === ANTON_PROJECT_INSTRUCTIONS_PATH;
+}
+
+/** Legacy installs: true if `relPath` is under `.context/` (pre-migration tree). */
+export function isUnderContextDir(relPath) {
+  const r = String(relPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  return r === '.context' || r.startsWith('.context/');
+}
+
+/** True if `relPath` is under the project `.anton/` tree (runtime state, outputs, etc.). */
+export function isUnderAntonDir(relPath) {
+  const r = String(relPath || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  return r === '.anton' || r.startsWith('.anton/');
+}
+
+/**
+ * Stat just `.anton/anton.md` for the project — far cheaper than
+ * `listProjectFiles` when the only thing the caller needs is the
+ * canonical instructions row. Returns `{ file: { path, name, size,
+ * modified, is_dir, synthetic? } }`. `synthetic: true` means the
+ * file doesn't exist on disk yet (renderer should show the "empty,
+ * click to author" affordance). Coalesced like `listProjectFiles`.
+ */
+export async function fetchProjectInstructions(projectName) {
+  if (!projectName) return { file: null };
+  return dedupe(`projects/${projectName}/instructions`, () =>
+    req(`/projects/${enc(projectName)}/instructions`),
+  );
+}
+
+export async function listProjectFiles(projectName) {
+  if (!projectName) return { files: [] };
+  // Coalesced — see `dedupe` notes above. WorkingFolderLive +
+  // ContextCard mount in the same rail and both call this on open,
+  // so without coalescing every project switch fires two identical
+  // requests. The cache entry releases on settle, so subsequent
+  // streaming polls hit the network normally.
+  return dedupe(`projects/${projectName}/files`, () =>
+    req(`/projects/${enc(projectName)}/files`),
+  );
+}
+
+export async function readProjectFile(projectName, path) {
+  // `path` may have slashes — encode each segment, not the whole
+  // string (encodeURIComponent('a/b') → 'a%2Fb' which the FastAPI
+  // route would treat as a single literal segment).
+  const safe = path.split('/').map(enc).join('/');
+  return req(`/projects/${enc(projectName)}/files/${safe}`);
+}
+
+// HTML preview-mount for a project file — server registers the
+// parent dir under a token and returns a relative URL the iframe
+// should load with `src=`. Mirrors the artifact preview flow.
+export async function mountProjectFilePreview(projectName, path) {
+  return req(`/projects/preview-mount-file`, {
+    method: 'POST',
+    body: JSON.stringify({ name: projectName, path }),
+  });
+}
+
+// Absolute URL for downloading a project file's raw bytes. Server
+// sets `Content-Disposition: attachment` so browsers trigger a save
+// dialog rather than rendering inline.
+export function projectFileDownloadUrl(projectName, path) {
+  const safe = path.split('/').map(enc).join('/');
+  return `${BASE}/projects/${enc(projectName)}/files-raw/${safe}`;
+}
+
+export async function writeProjectFile(projectName, path, content) {
+  const safe = path.split('/').map(enc).join('/');
+  const res = await fetch(BASE + `/projects/${enc(projectName)}/files/${safe}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: content || '' }),
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch {}
+    throw new Error(detail || `Write failed (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function uploadProjectFiles(projectName, files) {
+  // `files` is an iterable of File objects (drag&drop or input).
+  // Endpoint accepts a multipart payload with a repeated `files`
+  // field — same shape FastAPI's `list[UploadFile]` consumes.
+  const form = new FormData();
+  for (const f of files) form.append('files', f, f.name);
+  const res = await fetch(BASE + `/projects/${enc(projectName)}/files/upload`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch {}
+    throw new Error(detail || `Upload failed (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function deleteProjectFile(projectName, path) {
+  const safe = path.split('/').map(enc).join('/');
+  const res = await fetch(BASE + `/projects/${enc(projectName)}/files/${safe}`, {
+    method: 'DELETE',
+  });
+  if (res.status === 404) return { status: 'gone', path };
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch {}
+    throw new Error(detail || `Delete failed (${res.status})`);
+  }
+  return res.json();
+}
+
+
+export async function fetchActiveProject() {
+  try {
+    const projects = await fetchProjects();
+    const active = projects.find((p) => p.is_active || p.isActive);
+    return active?.name || null;
+  } catch {
+    return null;
+  }
+}
+
+// Set the active project via PATCH /projects/{id} with { is_active: true }.
+// Accepts a project object (with id) or a name string.
+export async function setActiveProject(projectOrName) {
+  const id = projectOrName?.id;
+  if (id) {
+    return req(`/projects/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: true }),
+    });
+  }
+  // Fallback: lookup by name
+  const name = typeof projectOrName === 'string' ? projectOrName : projectOrName?.name;
+  const projects = await fetchProjects();
+  const match = projects.find((p) => p.name === name);
+  if (!match?.id) throw new Error(`Project "${name}" not found`);
+  return req(`/projects/${encodeURIComponent(match.id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ is_active: true }),
+  });
+}
+
+// ─── Artifacts ────────────────────────────────────────────────────────────────
+// Returns the full system-wide artifact list. Heavy enough that
+// callers need to be careful not to fan out: ProjectsView's row
+// stats hook calls this from each visible project row, and prior to
+// the `dedupe` wrapper that meant N copies of the same request on
+// every list render. With coalescing, one network request fans out
+// to all subscribers and the cache entry releases on settle.
+export async function fetchArtifacts({ projectPath } = {}) {
+  // `projectPath` scopes the response to one project's
+  // `<base>/artifacts/` tree. Used by the project-detail rail card
+  // so the response is small and the server skips reading every
+  // other project's metadata.json. Omit it (or pass undefined) for
+  // the system-wide list the global Live Artifacts page wants.
+  const suffix = projectPath
+    ? `?project_path=${encodeURIComponent(projectPath)}`
+    : '';
+  // Dedupe key includes the path so a global fetch and a scoped
+  // fetch don't share an in-flight promise.
+  return dedupe(`artifacts${suffix}`, async () => {
+    try {
+      return await req(`/artifacts/${suffix}`);
+    } catch {
+      return [];
+    }
+  });
+}
+
+export async function previewArtifact(path) {
+  return req(`/artifacts/preview?path=${encodeURIComponent(path)}`);
+}
+
+// Mount an artifact for iframe preview. Two response shapes:
+//   - kind="static" (HTML artifacts): server returns `relUrl` under
+//     /artifacts/preview-asset/<token>/…; the iframe loads it directly.
+//   - kind="proxy"  (backend+frontend artifacts): server returns the
+//     artifact dir; the renderer then asks the Electron main process to
+//     point the local preview proxy at that dir and gets back the URL.
+// `kind` is the discriminator; legacy callers can keep using `url`.
+export async function mountArtifactPreview(path) {
+  const data = await req('/artifacts/preview-mount', {
+    method: 'POST',
+    body: JSON.stringify({ path }),
+  });
+  const kind = data?.kind || (data?.relUrl ? 'static' : '');
+  // Prefer the stateless `serveUrl` over the token `relUrl`: it's stable,
+  // shareable, and resolves against any origin — works in web deployment.
+  // `serveUrl` already carries `/v1`, so combine with ROOT_BASE, not BASE.
+  const url = data?.serveUrl
+    ? `${ROOT_BASE}${data.serveUrl}`
+    : (data?.relUrl ? `${BASE}${data.relUrl}` : '');
+  return {
+    kind,
+    token: data?.token,
+    entry: data?.entry,
+    artifactDir: data?.artifactDir || '',
+    // Backend port for proxy previews — so the viewer can build a direct
+    // `http://127.0.0.1:<port>` URL for "Open in OS" without the proxy.
+    port: typeof data?.port === 'number' ? data.port : null,
+    // Absolute URL the iframe loads directly (static) or empty (proxy).
+    url,
+    // Loopback URL of the cowork-process preview proxy. Web shell only.
+    proxyUrl: data?.proxyUrl || '',
+    // Origin-relative serve URL for callers that open the artifact in a
+    // new tab (web "open" action).
+    serveUrl: data?.serveUrl ? `${ROOT_BASE}${data.serveUrl}` : '',
+    // Server-side sidecar lookup of the artifact's published URL (if
+    // any). Forwarded so the viewer shows the "Published" pill even
+    // when opened from a chat bubble — those carry no publishedUrl on
+    // the artifact object since they're built from streamed payloads.
+    publishedUrl: data?.publishedUrl || '',
+    // Backend launch status for proxy previews. When false, launchError
+    // carries the reason — the viewer surfaces it instead of an empty iframe.
+    backendRunning: data?.backendRunning !== false,
+    launchError: data?.launchError || '',
+  };
+}
+
+export async function openArtifact(path) {
+  return req('/artifacts/open', { method: 'POST', body: JSON.stringify({ path }) });
+}
+
+// Absolute "private" URL for an artifact's primary file: the
+// origin-relative `/v1/artifacts/serve/...` endpoint made absolute
+// against the current API origin. In the web build this is the
+// canonical address of the artifact — the file lives on the server,
+// not the user's machine — and in production it sits behind the auth
+// proxy, hence "private" (as opposed to the public `publishedUrl`).
+// Returns '' when the artifact has no serveable primary file yet.
+export function artifactServeUrl(artifact) {
+  const rel = artifact?.serveUrl || '';
+  if (!rel) return '';
+  return rel.startsWith('http') ? rel : `${host.getApiOrigin()}${rel}`;
+}
+
+// Open an artifact's primary file the right way for the current host.
+// Only the desktop app pointed at the local loopback server can hand an
+// OS path to the shell; in the browser (or a desktop app pointed at a
+// remote server) the file isn't on this machine, so we open its HTTP
+// serve URL instead — falling back to the published URL when the
+// artifact has no serveUrl yet.
+export async function openArtifactFile(artifact) {
+  const canOpenLocalFile = host.isElectron && host.isLocalApiOrigin();
+  if (!canOpenLocalFile) {
+    const url = artifactServeUrl(artifact) || artifact?.publishedUrl || '';
+    if (!url) return { ok: false, reason: 'no-serve-url' };
+    try { await host.openExternal(url); }
+    catch { window.open(url, '_blank', 'noreferrer'); }
+    return { ok: true };
+  }
+  return openArtifact(artifact?.path || '');
+}
+
+export async function revealArtifact(path) {
+  return req('/artifacts/reveal', { method: 'POST', body: JSON.stringify({ path }) });
+}
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+// Key maps, row transforms, provider backfill, and write-diffing live in
+// settingsTransform.js (pure functions, no network calls).  The API calls
+// here are thin wrappers that fetch/push and delegate the translation.
+
+// Snapshot of the last-fetched settings — used by diffSettingsForWrite to
+// skip no-op writes and by the masked-sentinel ("***") skip logic.
+let _lastFetchedSettings = {};
+
+// Serialize settings reads/writes so a concurrent fetchSettings +
+// updateSettings can't race on _lastFetchedSettings.
+let _settingsLock = Promise.resolve();
+
+// Per-provider model picker options + recommended (planning, coding) pair,
+// owned by the backend (cowork-server). For minds-cloud the list is the live
+// MindsHub `/v1/models` set. Returns null on failure so callers fall back to
+// whatever static seed they already have. Model names are NOT maintained in
+// this repo — this is the single source.
+export async function fetchRecommendedModels() {
+  try {
+    return await req('/settings/recommended-models');
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchSettings() {
+  const op = _settingsLock.then(async () => {
+    try {
+      const rows = await req('/settings/');
+      const result = transformSettingsRows(rows);
+      try {
+        const v = await req('/settings/validate', { method: 'POST', body: JSON.stringify({}) });
+        result.configReady = v.configReady;
+        result.configError = v.configError;
+        result.providerLabel = v.provider;
+      } catch { /* leave defaults */ }
+      // Overlay the server's recommended-models (MindsHub's live `/v1/models`
+      // list for minds-cloud). Falls back to the static lists seeded by
+      // transformSettingsRows when the endpoint is absent or unreachable.
+      const rec = await fetchRecommendedModels();
+      if (rec?.recommendedModels) {
+        result.recommendedModels = { ...result.recommendedModels, ...rec.recommendedModels };
+      }
+      if (rec?.recommendedPair) {
+        result.recommendedPair = { ...result.recommendedPair, ...rec.recommendedPair };
+      }
+      _lastFetchedSettings = result;
+      return result;
+    } catch {
+      return { ...MOCK_DATA.settings, configReady: false, configError: 'Backend is offline.' };
+    }
+  });
+  _settingsLock = op.catch(() => {});
+  return op;
+}
+
+export async function updateSettings(patch) {
+  const op = _settingsLock.then(async () => {
+    const writes = diffSettingsForWrite(patch, _lastFetchedSettings);
+
+    const updated = [];
+    const failed = [];
+    for (const [key, value] of Object.entries(writes)) {
+      try {
+        await req(`/settings/${encodeURIComponent(key)}`, {
+          method: 'PUT',
+          body: JSON.stringify({ value }),
+        });
+        updated.push(key);
+      } catch (err) {
+        console.warn(`Failed to save setting ${key}:`, err);
+        failed.push({ key, message: err?.message || String(err) });
+      }
+    }
+
+    if (failed.length > 0) {
+      const summary = failed.map((f) => `${f.key}: ${f.message}`).join('; ');
+      const err = new Error(`Failed to save ${failed.length === 1 ? 'setting' : 'settings'}: ${summary}`);
+      err.failed = failed;
+      err.updated = updated;
+      throw err;
+    }
+
+    // Re-fetch after successful writes so _lastFetchedSettings reflects
+    // the server's canonical state (including any server-side defaults).
+    try {
+      const rows = await req('/settings/');
+      _lastFetchedSettings = transformSettingsRows(rows);
+    } catch { /* keep prior snapshot */ }
+
+    try {
+      const v = await req('/settings/validate', { method: 'POST', body: JSON.stringify({}) });
+      return { status: 'ok', updated, configReady: v.configReady, configError: v.configError };
+    } catch {
+      return { status: 'ok', updated };
+    }
+  });
+  _settingsLock = op.catch(() => {});
+  return op;
+}
+
+export async function validateSettings() {
+  return req('/settings/validate', { method: 'POST', body: JSON.stringify({}) });
+}
+
+export async function testProviders(providers) {
+  const body = Array.isArray(providers) ? { providers } : {};
+  try {
+    return await req('/settings/test-providers', { method: 'POST', body: JSON.stringify(body) });
+  } catch (err) {
+    return { providerStatus: {}, providerStatusDetails: {}, error: err?.message || 'Test failed' };
+  }
+}
+
+export async function revealSettingKey(name) {
+  try {
+    const res = await req(`/settings/reveal-key/${encodeURIComponent(name)}`);
+    return res?.value || '';
+  } catch {
+    return '';
+  }
+}
+
+export async function fetchIntegrations() {
+  try {
+    return await req('/integrations');
+  } catch {
+    return { items: MOCK_DATA.integrations };
+  }
+}
+
+export async function startGoogleDriveAuth() {
+  return req('/integrations/google-drive/oauth/start', { method: 'POST', body: JSON.stringify({}) });
+}
+
+export async function startGoogleCalendarAuth() {
+  return req('/integrations/google-calendar/oauth/start', { method: 'POST', body: JSON.stringify({}) });
+}
+
+export async function startGmailAuth() {
+  return req('/integrations/gmail/oauth/start', { method: 'POST', body: JSON.stringify({}) });
+}
+
+export async function startGoogleAdsAuth(params = {}) {
+  return req('/integrations/google-ads/oauth/start', { method: 'POST', body: JSON.stringify(params) });
+}
+
+export async function startGoogleAnalyticsAuth() {
+  return req('/integrations/google-analytics/oauth/start', { method: 'POST', body: JSON.stringify({}) });
+}
+
+export async function startGcpAuth() {
+  return req('/integrations/gcp/oauth/start', { method: 'POST', body: JSON.stringify({}) });
+}
+
+// ─── Anton Utilities ────────────────────────────────────────────────────────
+export async function fetchMemory(projectPath) {
+  const suffix = projectPath ? `?project_path=${encodeURIComponent(projectPath)}` : '';
+  // Coalesced per project. ContextCard, ProjectCard, and the list
+  // view's row-stats hook can all ask for the same project's memory
+  // listing at the same moment; this collapses the duplicates.
+  return dedupe(`memory${suffix}`, () => req(`/memory${suffix}`));
+}
+
+export async function saveMemory(payload) {
+  return req('/memory', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function deleteMemory({ scope, relativePath, projectPath }) {
+  const params = new URLSearchParams({ scope, relative_path: relativePath });
+  if (projectPath) params.set('project_path', projectPath);
+  return req(`/memory?${params.toString()}`, { method: 'DELETE' });
+}
+
+export async function fetchSkills() {
+  return req('/skills');
+}
+
+export async function saveSkill(payload) {
+  return req('/skills', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function deleteSkill(label) {
+  return req(`/skills/${encodeURIComponent(label)}`, { method: 'DELETE' });
+}
+
+export async function fetchDatasources() {
+  const data = await req('/connectors/connections');
+  return { connections: Array.isArray(data) ? data : [] };
+}
+
+// DEPRECATED: Legacy manual-form save — the real save flow now goes through
+// streamDataVaultSubmission → POST /connectors/submissions. The old
+// POST /datasources and POST /datasources/validate endpoints no longer
+// exist on the server. These stubs exist only because UtilitiesView's
+// retired ConnectView still imports them; they are unreachable in the
+// current routing. Remove when ConnectView is fully deleted.
+export async function saveDatasource(_payload) {
+  console.warn('saveDatasource() is deprecated — use streamDataVaultSubmission instead');
+  return { ok: true };
+}
+
+export async function validateDatasource(_payload) {
+  console.warn('validateDatasource() is deprecated — use streamDataVaultSubmission instead');
+  return { valid: true };
+}
+
+export async function deleteDatasource(engine, name) {
+  return req(`/connectors/connections/${encodeURIComponent(engine)}/${encodeURIComponent(name)}`, { method: 'DELETE' });
+}
+
+// Modify-flow read: returns the saved connection as
+//   {
+//     engine, name, createdAt, updatedAt,
+//     secureKeys: string[],                  // names of secret fields
+//     fields: { ... },                       // non-secret values verbatim,
+//                                            // secret slots replaced with
+//                                            // ANTON_VAULT_KEEP sentinel
+//   }
+// The renderer pre-fills the form with `fields`. On submit, any
+// field still carrying the sentinel resolves server-side against
+// the prior record (the modify merge — see anton-core's
+// `resolve_modify_merge`). Empty string means "explicitly clear".
+export async function fetchSavedConnection(engine, name) {
+  return req(`/connectors/connections/${encodeURIComponent(engine)}/${encodeURIComponent(name)}`);
+}
+
+// Sentinel string used in the modify-flow round-trip. Mirrors the
+// constant in `anton.core.datasources.data_vault.ANTON_VAULT_KEEP` —
+// they MUST stay in sync. The form panel uses this to detect "user
+// hasn't touched this secret field" on submit; any field whose
+// value is still this exact string is sent back as-is and resolved
+// server-side against the prior record.
+export const ANTON_VAULT_KEEP = '__anton_vault_keep__';
+
+// ─── Connector registry ─────────────────────────────────────────────
+//
+// Predefined JSON specs in server/connectors/. Three calls:
+//   list()         → lightweight summaries for the picker UI
+//   get(id)        → the full spec (literal-retrieval, no LLM)
+//   match(query)   → ranked candidates for natural-language input
+//
+// The match endpoint runs a no-LLM cascade (exact id/alias →
+// token-overlap) so most calls finish without a model round-trip.
+
+export async function fetchConnectors() {
+  try {
+    const data = await req('/connectors/specs');
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchConnector(id) {
+  return req(`/connectors/specs/${encodeURIComponent(id)}`);
+}
+
+export async function matchConnector(query, maxCandidates = 3) {
+  return req('/connectors/specs/match', {
+    method: 'POST',
+    body: JSON.stringify({ query, max_candidates: maxCandidates }),
+  });
+}
+
+// Save a connector connection through the JSON-declared field
+// schema (bypasses Anton-core's built-in registry — needed for
+// OAuth + service-account flows where the legacy email/password
+// engine would reject the credential shape).
+export async function saveConnector(connectorId, payload) {
+  const body = JSON.stringify({ connector_id: connectorId, ...(payload || {}) });
+  try {
+    return await req('/connectors/submissions', { method: 'POST', body });
+  } catch (err) {
+    // TODO: remove this fallback once cowork-server is the only backend.
+    // The new cowork-server serves POST /connectors/submissions; the
+    // legacy local server/main.py only has POST /connectors/{id}/save
+    // with the SAME payload shape (method / name / values). Fall back
+    // ONLY on a 404 (route absent on this backend) — a 400/422/500
+    // means the endpoint exists and rejected us, so surface that as-is
+    // rather than masking it or risking a double-write.
+    if (err?.status !== 404) throw err;
+    console.warn('saveConnector: /connectors/submissions 404 — falling back to legacy /connectors/{id}/save');
+    return req(`/connectors/${encodeURIComponent(connectorId)}/save`, { method: 'POST', body });
+  }
+}
+
+// ─── Web (redirect-based) connector OAuth ──────────────────────────────────
+// The desktop app authenticates connectors through an Electron loopback
+// PKCE flow (host.oauthConnect). The web SPA can't open a loopback server,
+// so it drives the server-side redirect flow instead:
+//   1. startConnectorOAuth → server mints PKCE + state, returns authUrl.
+//   2. open authUrl (new tab); the user consents; the provider redirects
+//      to the server callback, which exchanges the code + saves the vault
+//      record itself.
+//   3. pollConnectorOAuth(state) until status is 'success' | 'error'.
+// The SPA never handles the code or tokens directly.
+
+export async function startConnectorOAuth(connectorId, { method, name, clientId, clientSecret } = {}) {
+  return req(`/connectors/${encodeURIComponent(connectorId)}/oauth/start`, {
+    method: 'POST',
+    body: JSON.stringify({
+      method: method || null,
+      name: name || '',
+      client_id: clientId || '',
+      client_secret: clientSecret || '',
+    }),
+  });
+}
+
+export async function pollConnectorOAuth(state) {
+  return req(`/connectors/oauth/status?state=${encodeURIComponent(state)}`);
+}
+
+export async function fetchPublishable() {
+  return req('/publish');
+}
+
+// Submit a data-vault form and stream the cowork agent's response.
+//
+// Replaces the prior fire-and-forget POST. The agent endpoint:
+//   1. stages the values into the vault keyed by submission_id
+//   2. validates / probes the connection server-side
+//   3. emits a Response-API-compatible SSE stream with text deltas,
+//      a `data-vault-form-patch` block, and `response.completed` with
+//      a status field
+//
+// We pipe those events through the same callbacks the chat stream
+// uses, so the consumer (App.jsx) can treat the result as a fresh
+// assistant turn — no separate render path needed.
+//
+// Field VALUES never round-trip through the response.
+export function streamDataVaultSubmission({
+  formId, conversationId, formSpec, values, skipped, name, method,
+  onChunk, onProgress, onToolResult, onDone, onError, onEvent,
+} = {}) {
+  const ctrl = new AbortController();
+  (async () => {
+    try {
+      const res = await fetch(`${BASE}/connectors/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          form_id: formId,
+          conversation_id: conversationId || null,
+          name: name || formSpec?._existing_name || formSpec?.name || '',
+          method: method || null,
+          values: values || {},
+          skipped: skipped || [],
+          form_spec: formSpec || null,
+        }),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw await responseError(res, `Form submit failed (${res.status})`);
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buffer = '';
+      let cid = conversationId || null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += dec.decode(value, { stream: true });
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+        for (const block of events) {
+          const dataLine = block.split('\n').find((line) => line.startsWith('data:'));
+          if (!dataLine) continue;
+          const raw = dataLine.slice(5).trim();
+          if (!raw || raw === '[DONE]') continue;
+          let msg;
+          try { msg = JSON.parse(raw); } catch { continue; }
+
+          onEvent?.(msg);
+
+          switch (msg.type) {
+            case 'response.created':
+              cid = msg.conversation_id || cid;
+              break;
+            case 'response.output_text.delta':
+              onChunk?.(msg.delta || '', cid);
+              break;
+            case 'response.in_progress': {
+              const role = msg.thought_role || '';
+              if (role === 'thought.scratchpad.result') {
+                onToolResult?.({
+                  type: 'tool_result',
+                  name: msg.tool_name || '',
+                  action: msg.tool_action || '',
+                  content: msg.content || '',
+                }, cid);
+              } else {
+                onProgress?.({
+                  type: 'progress',
+                  phase: msg.phase || role.replace(/^thought\./, '') || 'progress',
+                  message: msg.message || msg.content || '',
+                  thoughtRole: role,
+                }, cid);
+              }
+              break;
+            }
+            case 'response.completed':
+              onDone?.(cid, msg);
+              return;
+            case 'response.failed':
+              onError?.(msg.error || msg.message || 'Form processing failed', msg);
+              return;
+            default:
+              break;
+          }
+        }
+      }
+      onDone?.(cid);
+    } catch (err) {
+      if (err.name !== 'AbortError') onError?.(err.message);
+    }
+  })();
+  return ctrl;
+}
+
+// Backwards-compatible non-streaming wrapper — kept so callers that
+// just need to stage values without streaming back can still do so.
+// (Currently unused by the form panel; might disappear in a cleanup.)
+export async function submitDataVaultForm({ formId, conversationId, values, skipped, formSpec, name, method }) {
+  // Fire the streaming endpoint but only consume the JSON body of
+  // the response — useful for tests/probes that don't want SSE.
+  const res = await fetch(`${BASE}/connectors/submissions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      form_id: formId,
+      conversation_id: conversationId || null,
+      name: name || formSpec?._existing_name || formSpec?.name || '',
+      method: method || null,
+      values: values || {},
+      skipped: skipped || [],
+      form_spec: formSpec || null,
+    }),
+  });
+  if (!res.ok) throw await responseError(res, `Form submit failed (${res.status})`);
+  // Consume the stream and return a summary.
+  const text = await res.text();
+  return { status: 'streamed', body: text };
+}
+
+// `password` (optional): when a non-empty string, the artifact is
+// published password-protected; omit / empty publishes it public.
+export async function publishArtifact(path, password) {
+  const body = password ? { path, password } : { path };
+  return req('/publish', { method: 'POST', body: JSON.stringify(body) });
+}
+
+// The path to send to publish/unpublish for an artifact. Prefer the
+// artifact *folder* so folder-based artifacts publish as a unit — the
+// server resolves the primary file for static artifacts and treats
+// fullstack apps as a directory. Legacy loose-HTML and chat-bubble
+// artifacts carry no `folder`, so fall back to the primary file path
+// (the server then climbs to the artifact root itself).
+export function publishTargetPath(artifact) {
+  return artifact?.folder
+    || artifact?.canonicalPath || artifact?.file_path || artifact?.path || '';
+}
+
+export async function fetchBrowseStatus() {
+  return req('/browse/status');
+}
+
+// ─── Channels ───────────────────────────────────────────────────────────────
+// Wraps /api/v1/channels/* on cowork-server. Plugins advertise a credential
+// schema + capability flags so the UI knows which fields/buttons to render;
+// secrets are masked on read (is_set / value:null) and only sent on write.
+
+export async function fetchChannelPlugins() {
+  try {
+    const data = await req('/channels/plugins');
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchChannelStatus() {
+  try {
+    return await req('/channels/status');
+  } catch {
+    return { plugin_count: 0, installation_count: 0, channels: [] };
+  }
+}
+
+export async function fetchChannelInstallations() {
+  try {
+    const data = await req('/channels/installations');
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+// The harness that serves channel conversations (separate from the desktop
+// harness). Returns the current value plus the registered options.
+export async function fetchChannelAgent() {
+  try {
+    return await req('/channels/agent');
+  } catch {
+    return { harness: '', options: [] };
+  }
+}
+
+export async function setChannelAgent(harness) {
+  return req('/channels/agent', { method: 'PUT', body: JSON.stringify({ harness }) });
+}
+
+export async function fetchChannelConfig(channelType) {
+  return req(`/channels/${enc(channelType)}/config`);
+}
+
+export async function saveChannelConfig(channelType, values) {
+  return req(`/channels/${enc(channelType)}/config`, {
+    method: 'PUT',
+    body: JSON.stringify({ values: values || {} }),
+  });
+}
+
+export async function deleteChannelConfig(channelType) {
+  return req(`/channels/${enc(channelType)}/config`, { method: 'DELETE' });
+}
+
+// Rebuild the live adapter from stored config (no webhook registration).
+export async function reloadChannel(channelType) {
+  return req(`/channels/${enc(channelType)}/reload`, { method: 'POST' });
+}
+
+// Register the channel's inbound endpoint with the platform (Telegram setWebhook).
+// 501 when the channel has no lifecycle (gate on capabilities.supports_webhook_setup).
+export async function setupChannel(channelType) {
+  return req(`/channels/${enc(channelType)}/setup`, { method: 'POST' });
+}
+
+export async function teardownChannel(channelType) {
+  return req(`/channels/${enc(channelType)}/teardown`, { method: 'POST' });
+}
+
+// ── Channel bindings (wire an external chat/thread to a project/conversation) ──
+
+export async function fetchChannelBindings(channelType) {
+  const suffix = channelType ? `?channel_type=${enc(channelType)}` : '';
+  try {
+    const data = await req(`/channels/bindings${suffix}`);
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createChannelBinding(payload) {
+  return req('/channels/bindings', { method: 'POST', body: JSON.stringify(payload || {}) });
+}
+
+export async function updateChannelBinding(bindingId, patch) {
+  return req(`/channels/bindings/${enc(bindingId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch || {}),
+  });
+}
+
+export async function deleteChannelBinding(bindingId) {
+  return req(`/channels/bindings/${enc(bindingId)}`, { method: 'DELETE' });
+}
+
+// ─── Attachments And Context ───────────────────────────────────────────────
+
+/** POST /v1/attachments/{project_name}/{session_id}/upload — response body is a JSON array of file attachments. */
+export async function uploadAttachments(files, { projectName, sessionId } = {}) {
+  if (!projectName || !sessionId) {
+    throw new Error('Open a saved task before attaching files (project and conversation id are required).');
+  }
+  const enc = encodeURIComponent;
+  const form = new FormData();
+  Array.from(files).forEach((file) => form.append('files', file));
+  const res = await fetch(
+    `${BASE}/attachments/${enc(projectName)}/${enc(sessionId)}/upload`,
+    { method: 'POST', body: form },
+  );
+  if (!res.ok) throw await responseError(res, `Attachment upload failed (${res.status})`);
+  const data = await res.json();
+  return Array.isArray(data) ? data : [];
+}
+
+/** GET /v1/attachments/{project_name}/{session_id} — response body is a JSON array. */
+export async function fetchAttachments(projectName, sessionId, { ids } = {}) {
+  if (!projectName || !sessionId) {
+    return { attachments: [] };
+  }
+  const enc = encodeURIComponent;
+  const qs = new URLSearchParams();
+  if (Array.isArray(ids) && ids.length) {
+    for (const id of ids) {
+      if (id) qs.append('ids', id);
+    }
+  }
+  const q = qs.toString();
+  const path = `/attachments/${enc(projectName)}/${enc(sessionId)}${q ? `?${q}` : ''}`;
+  const data = await req(path);
+  const raw = Array.isArray(data) ? data : [];
+  return { attachments: raw };
+}
+
+export async function deleteAttachment(id, { projectName, sessionId } = {}) {
+  // Prefer the path-scoped route — the legacy `DELETE /attachments/{id}`
+  // looked up a JSON state file the upload code never populates and
+  // always 404'd. When the caller passes project + session, hit the
+  // new endpoint that walks the on-disk directory directly.
+  if (projectName && sessionId && id) {
+    const enc = encodeURIComponent;
+    return req(`/attachments/${enc(projectName)}/${enc(sessionId)}/${enc(id)}`, { method: 'DELETE' });
+  }
+  // Back-compat — kept so any older call site that hasn't migrated
+  // still hits the original route (and gets the same 404 it always
+  // did, surfacing the problem rather than failing silently).
+  return req(`/attachments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/** Absolute URL to the attachment's underlying file, served inline so
+ * the browser's default handler (image / pdf / text preview) takes
+ * over when the row is clicked. Works in both Electron and the web
+ * SPA — `host.openExternal(url)` does the right thing for each. */
+export function attachmentRawUrl(projectName, sessionId, attachmentId) {
+  if (!projectName || !sessionId || !attachmentId) return null;
+  const enc = encodeURIComponent;
+  return `${BASE}/attachments/${enc(projectName)}/${enc(sessionId)}/${enc(attachmentId)}/raw`;
+}
+
+/** Promote a task upload to a project-level file. Returns
+ * `{ ok, project_path, absolute_path }` on success. The client must
+ * refresh BOTH the task uploads list and the project files list — the
+ * file moves out of one and into the other on disk. */
+export async function moveAttachmentToProject(projectName, sessionId, attachmentId) {
+  if (!projectName || !sessionId || !attachmentId) {
+    throw new Error('projectName, sessionId, and attachmentId are required.');
+  }
+  const enc = encodeURIComponent;
+  return req(
+    `/attachments/${enc(projectName)}/${enc(sessionId)}/${enc(attachmentId)}/move-to-project`,
+    { method: 'POST' },
+  );
+}
+
+// ─── Search, Pins, Schedules ───────────────────────────────────────────────
+export async function searchCowork(query) {
+  if (!query.trim()) return { results: [] };
+  return req(`/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function fetchPins() {
+  try {
+    return await req('/pins');
+  } catch {
+    return { pins: [] };
+  }
+}
+
+export async function pinTask(task) {
+  return req('/pins/', { method: 'POST', body: JSON.stringify({ item_type: 'conversation', item_id: task.id, title: task.title }) });
+}
+
+export async function unpinTask(id) {
+  return req(`/pins/${encodeURIComponent(id)}?item_type=conversation`, { method: 'DELETE' });
+}
+
+// Rename + delete + move are powered by the conversation patch/delete
+// endpoints. The server's PATCH supports both `title` and `project`
+// in one call; we expose them as separate helpers for clearer call
+// sites.
+export async function renameConversation(id, title) {
+  return req(`/conversations/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ title }),
+  });
+}
+
+/** PATCH conversation meta (`title`, `project`, `disabled_connections`, …). */
+export async function patchConversation(id, body) {
+  return req(`/conversations/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+// Delete one user→answer cycle (the question + the assistant
+// response, including any internal tool_use/tool_result blocks
+// anton generated during the turn). `turnIndex` is the 0-based
+// displayable bubble index — same value used to look up events
+// in the per-turn sidecar.
+export async function deleteConversationTurn(id, turnIndex) {
+  const res = await fetch(
+    BASE + `/conversations/${encodeURIComponent(id)}/turns/${turnIndex}`,
+    {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    },
+  );
+  if (res.status === 404) return { status: 'gone', id, turnIndex };
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch {}
+    throw new Error(detail || `Delete turn failed (${res.status})`);
+  }
+  return res.json();
+}
+
+export async function deleteConversation(id) {
+  // Idempotent — if the server says "not found", treat that as
+  // success. The conversation may have been removed by a previous
+  // attempt or a concurrent client; either way the desired end state
+  // ("gone from server") is achieved.
+  const res = await fetch(BASE + `/conversations/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (res.status === 404) return { status: 'gone', id };
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json())?.detail || ''; } catch {}
+    throw new Error(detail || `Delete failed (${res.status})`);
+  }
+  if (res.status === 204) return { ok: true };
+  return res.json();
+}
+
+export async function moveConversation(id, projectName) {
+  return req(`/conversations/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ project: projectName }),
+  });
+}
+
+export async function recordTaskVisit(task, autoPin = false) {
+  const params = new URLSearchParams({ auto_pin: autoPin ? 'true' : 'false' });
+  if (task?.title) params.set('title', task.title);
+  return req(`/pins/${encodeURIComponent(task.id)}/visit?${params.toString()}`, { method: 'POST' });
+}
+
+export async function fetchSchedules() {
+  try {
+    return await req('/schedules');
+  } catch {
+    return { schedules: [] };
+  }
+}
+
+export async function createSchedule(payload) {
+  return req('/schedules', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export async function updateSchedule(id, payload) {
+  return req(`/schedules/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(payload) });
+}
+
+export async function deleteSchedule(id) {
+  return req(`/schedules/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export async function pauseSchedule(id) {
+  return req(`/schedules/${encodeURIComponent(id)}/pause`, { method: 'POST' });
+}
+
+export async function resumeSchedule(id) {
+  return req(`/schedules/${encodeURIComponent(id)}/resume`, { method: 'POST' });
+}
+
+export async function runScheduleNow(id) {
+  return req(`/schedules/${encodeURIComponent(id)}/run-now`, { method: 'POST' });
+}
+
+export async function fetchScheduleRuns(id, { limit = 100 } = {}) {
+  // Returns { schedule_id, runs: [{ id, scheduleId, startedAt,
+  // finishedAt, durationMs, status, error, sessionId, manual }] }
+  // Newest first.
+  try {
+    return await req(`/schedules/${encodeURIComponent(id)}/runs?limit=${encodeURIComponent(limit)}`);
+  } catch {
+    return { schedule_id: id, runs: [] };
+  }
+}
+
+// ─── Mock data (used when server is offline) ──────────────────────────────────
+export const MOCK_DATA = {
+  tasks: [
+    {
+      id: 't1',
+      title: 'Communicate RIF to remaining team',
+      subtitle: '6 days ago',
+      status: 'active',
+      messages: [
+        {
+          role: 'user',
+          content: 'Help me draft a message to the remaining team about the RIF. Keep it human, factual, no corporate fluff. We need to acknowledge what happened last week, address the immediate questions, and outline next steps.',
+        },
+        {
+          role: 'assistant',
+          content: "I pulled the latest from your Operational ops project — the RIF announcement v3 doc and last week's all-hands transcript. Here's a draft. I kept it to three short sections, with the practical info up top.",
+          artifact: {
+            title: 'RIF — message to remaining team',
+            kind: 'Document', icon: 'doc',
+            progress: 72,
+            preview: [
+              { heading: "What's changed" },
+              { text: "Last Thursday we said goodbye to 14 colleagues across infra and ops. The decision was based on where we're investing for the next 18 months — primarily AI Fab and the Minds platform." },
+              { heading: 'What this means for you' },
+              { text: 'Reporting lines stay the same this quarter. New squad assignments will be shared by Monday.' },
+            ],
+          },
+        },
+      ],
+    },
+    { id: 't2', title: 'Determine Lightsail instance for AI Fab', subtitle: '7 days ago', status: 'idle', messages: [
+      { role: 'user', content: 'Determine Lightsail instance for AI Fab' },
+      { role: 'assistant', content: 'Picking this back up — I have the project context loaded. Where would you like to start?' },
+    ]},
+    { id: 't3', title: 'Review RIF announcement presentation', subtitle: '1 week ago', status: 'idle', messages: [
+      { role: 'user', content: 'Review RIF announcement presentation' },
+      { role: 'assistant', content: 'Picking this back up — I have the project context loaded. Where would you like to start?' },
+    ]},
+    { id: 't4', title: 'Write website copy for agent platform', subtitle: '2 weeks ago', status: 'done', messages: [
+      { role: 'user', content: 'Write website copy for agent platform' },
+      { role: 'assistant', content: 'Done — copy is in your Artifacts.' },
+    ]},
+    { id: 't5', title: 'Create website copy for MindsHub Cowork', subtitle: '2 weeks ago', status: 'done', messages: [
+      { role: 'user', content: 'Create website copy for MindsHub Cowork' },
+      { role: 'assistant', content: 'Done — copy is in your Artifacts.' },
+    ]},
+    { id: 't6', title: 'Create MindsDB website copy positioning', subtitle: '3 weeks ago', status: 'done', messages: [] },
+    { id: 't7', title: 'Redesign presentation slide from doc', subtitle: '3 weeks ago', status: 'idle', messages: [] },
+    { id: 't8', title: 'Create operational plan with milestones', subtitle: '1 month ago', status: 'done', messages: [] },
+  ],
+
+  projects: [
+    { id: 'p1', name: 'AI Fab launch', description: 'Hardware, infra, and brand for the AI Fab', taskCount: 14, fileCount: 23, updated: '2h ago', tint: 'rgba(31,156,176,0.12)', color: 'var(--primary-700)' },
+    { id: 'p2', name: 'MindsDB website', description: 'Marketing site copy + positioning', taskCount: 9, fileCount: 41, updated: 'Yesterday', tint: 'rgba(72,190,227,0.14)', color: 'var(--ocean-700)' },
+    { id: 'p3', name: 'Cowork brand', description: 'Brand and identity for the MindsHub Cowork app', taskCount: 6, fileCount: 12, updated: '3d ago', tint: 'rgba(120,186,172,0.18)', color: 'var(--sage-700)' },
+    { id: 'p4', name: 'Operational ops', description: 'Internal ops, RIF, hiring plans', taskCount: 11, fileCount: 8, updated: '1w ago', tint: 'rgba(244,177,131,0.15)', color: '#B7522B' },
+  ],
+
+  artifacts: [
+    { id: 'a1', title: 'RIF announcement — v3', kind: 'Document', updated: 'updated 4m ago', live: true, bg: 'linear-gradient(135deg, var(--stone-100), var(--surface-03))', snippet: "Team,\n\nAs we mentioned in last\nweek's all-hands, we are\nrestructuring our…" },
+    { id: 'a2', title: 'Lightsail cost projection', kind: 'Spreadsheet', updated: 'updated 1h ago', live: true, bg: 'linear-gradient(135deg, var(--ocean-50), #fff)', snippet: 'instance | type   | $/mo\n--------+--------+-----\n  ai-01 | xlarge |  84\n  ai-02 | medium |  42' },
+    { id: 'a3', title: 'Cowork landing — copy v2', kind: 'Document', updated: 'updated yesterday', live: false, bg: 'linear-gradient(135deg, var(--sage-50), #fff)', snippet: "A teammate that knows your\ncompany. Anton works in your\nprojects, with your data, on\nyour cadence." },
+    { id: 'a4', title: 'AI Fab brand explorations', kind: 'Canvas', updated: 'updated 2d ago', live: false, bg: 'linear-gradient(135deg, #fff, var(--stone-150))', snippet: '◇ logomark draft 04\n◇ wordmark v2\n◇ palette — aqua x stone' },
+  ],
+
+  scheduled: [
+    { id: 's1', title: 'Daily — pull GitHub PR digest', cadence: 'Every weekday at 9:00', nextRun: 'tomorrow 9:00', enabled: true },
+    { id: 's2', title: 'Weekly — sales pipeline summary', cadence: 'Mondays at 8:30', nextRun: 'Mon 8:30', enabled: true },
+    { id: 's3', title: 'Hourly — monitor Lightsail spend', cadence: 'Every hour', nextRun: 'in 24m', enabled: false },
+  ],
+
+  models: [
+    { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', desc: 'Balanced — fastest for daily work' },
+    { id: 'claude-opus-4-7',   name: 'Claude Opus 4.7',   desc: 'Best for deep reasoning and long tasks' },
+    { id: 'claude-haiku-4-5',  name: 'Claude Haiku 4.5',  desc: 'Quickest, lightweight responses' },
+  ],
+
+  settings: {
+    greeting: "Let's knock something off your list",
+    tone: 'balanced',
+    defaultModel: 'claude-sonnet-4-6',
+    autoPin: true,
+    showDots: true,
+    showCounters: true,
+    accentVariant: 'aqua',
+    planningProvider: 'anthropic',
+    planningModel: 'claude-sonnet-4-6',
+    codingProvider: 'anthropic',
+    codingModel: 'claude-haiku-4-5-20251001',
+    memoryEnabled: true,
+    memoryMode: 'autopilot',
+    episodicMemory: true,
+    proactiveDashboards: false,
+    anthropicApiKey: '',
+    openaiApiKey: '',
+    providers: [],
+    modelMode: 'default',
+    modelOverrides: {},
+    providerTypes: ['minds-cloud', 'anthropic', 'openai', 'gemini', 'openai-compatible'],
+    providerTypeLabels: {
+      'minds-cloud': 'MindsHub',
+      anthropic: 'Anthropic',
+      openai: 'OpenAI',
+      gemini: 'Gemini',
+      'openai-compatible': 'OpenAI-compatible',
+    },
+    recommendedModels: {},
+    recommendedPair: {},
+    providerStatus: {},
+  },
+
+  integrations: [
+    {
+      id: 'google_drive',
+      title: 'Google Drive',
+      engine: 'google_drive',
+      status: 'needs_config',
+      description: 'Connect your Google Drive account with Google sign-in so Cowork can work with Drive files, Docs, and Sheets.',
+      setupMode: 'browser_oauth',
+      connectionCount: 0,
+      connections: [],
+      engineAvailable: true,
+      oauth: {
+        ready: false,
+        configError: 'Configure ANTON_GOOGLE_CLIENT_ID and ANTON_GOOGLE_CLIENT_SECRET in ~/.anton/.env to enable Google Drive sign-in.',
+        pending: false,
+        lastSuccessAt: '',
+        lastError: '',
+        lastErrorAt: '',
+        launchLabel: 'Connect Google Drive',
+        redirectUri: 'http://127.0.0.1:8765/v1/integrations/google-drive/oauth/callback',
+      },
+      notes: [
+        'Click Connect Google Drive to open Google sign-in in your browser.',
+        'Cowork stores the returned Google OAuth credentials in its local data vault under ~/.anton/data_vault/.',
+        'Google Drive only shows as connected after the OAuth callback succeeds.',
+      ],
+    },
+  ],
+};

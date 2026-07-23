@@ -1,0 +1,33 @@
+name: Release e2e scenarios
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: "Release tag the caller just created (e.g. v2.0.5)"
+        required: true
+        type: string
+
+jobs:
+  e2e-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Run E2E tests (live)
+        env:
+          ANTON_OPENAI_API_KEY: ${{ secrets.ANTON_OPENAI_API_KEY }}
+          ANTON_PLANNING_PROVIDER: openai
+          ANTON_CODING_PROVIDER: openai
+          ANTON_PLANNING_MODEL: gpt-4.1-mini
+          ANTON_CODING_MODEL: gpt-4.1-mini
+        run: uv run --extra dev pytest tests/e2e/ --live -v
