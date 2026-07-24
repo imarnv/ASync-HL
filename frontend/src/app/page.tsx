@@ -20,6 +20,7 @@ export default function Page() {
   const [activeTab, setActiveTab] = useState<string>("home");
   const [activeDataset, setActiveDataset] = useState<Dataset | null>(null);
   const [showKeysModal, setShowKeysModal] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   
   // API Keys stored locally in browser
   const [apiKeys, setApiKeys] = useState({
@@ -41,6 +42,15 @@ export default function Page() {
     });
   }, []);
 
+  // Close mobile drawer when resizing to desktop
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth > 768) setSidebarOpen(false);
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const saveKeys = () => {
     localStorage.setItem("async_api_key_gemini", apiKeys.gemini);
     localStorage.setItem("async_api_key_openai", apiKeys.openai);
@@ -50,52 +60,76 @@ export default function Page() {
 
   return (
     <div className="workspace-wrapper">
-      {/* Sidebar Navigation */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         datasetName={activeDataset ? activeDataset.filename : null}
         onKeysClick={() => setShowKeysModal(true)}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
-      
-      {/* Main Workspace Canvas */}
-      {activeTab === "playground" ? (
-        <DashboardPlayground activeDataset={activeDataset} setActiveTab={setActiveTab} />
-      ) : (
-        <div className="main-canvas">
-          {activeTab === "home" && (
-            <Home 
-              setActiveTab={setActiveTab} 
-              datasetLoaded={activeDataset !== null} 
-              filename={activeDataset ? activeDataset.filename : null}
-            />
-          )}
-          
-          {activeTab === "datasources" && (
-            <DataSources 
-              onDatasetLoaded={setActiveDataset} 
-              activeDataset={activeDataset}
-            />
-          )}
-          
-          {activeTab === "chat" && (
-            <ExcelChat activeDataset={activeDataset} />
-          )}
-          
-          {activeTab === "ml" && (
-            <MLStudio activeDataset={activeDataset} />
-          )}
-          
-          {activeTab === "reports" && (
-            <Reports activeDataset={activeDataset} />
-          )}
-        </div>
-      )}
 
-      {/* Global API Keys Configuration Modal */}
+      <div className="main-area">
+        <header className="mobile-topbar">
+          <button
+            type="button"
+            className="mobile-menu-btn"
+            aria-label="Open navigation"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span className="mobile-topbar-brand">async</span>
+        </header>
+      
+        {activeTab === "playground" ? (
+          <DashboardPlayground activeDataset={activeDataset} setActiveTab={setActiveTab} />
+        ) : (
+          <div className="main-canvas">
+            {activeTab === "home" && (
+              <Home 
+                setActiveTab={setActiveTab} 
+                datasetLoaded={activeDataset !== null} 
+                filename={activeDataset ? activeDataset.filename : null}
+              />
+            )}
+            
+            {activeTab === "datasources" && (
+              <DataSources 
+                onDatasetLoaded={setActiveDataset} 
+                activeDataset={activeDataset}
+              />
+            )}
+            
+            {activeTab === "chat" && (
+              <ExcelChat activeDataset={activeDataset} />
+            )}
+            
+            {activeTab === "ml" && (
+              <MLStudio activeDataset={activeDataset} />
+            )}
+            
+            {activeTab === "reports" && (
+              <Reports activeDataset={activeDataset} />
+            )}
+          </div>
+        )}
+      </div>
+
       {showKeysModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none">
-          <div className="glass-panel w-full max-w-md p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200 bg-white">
+          <div className="glass-panel w-full max-w-md p-6 sm:p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200 bg-white max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4">
               <h3 className="text-xl font-bold text-[#1b1b1b]">AI Credentials</h3>
               <button 
@@ -113,7 +147,6 @@ export default function Page() {
                 Your keys are saved locally in your browser storage (`localStorage`) and are sent securely to proxy queries directly through your backend API.
               </p>
 
-              {/* Gemini key */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--text-secondary)]">Google Gemini Key</label>
                 <input 
@@ -125,7 +158,6 @@ export default function Page() {
                 />
               </div>
 
-              {/* OpenAI key */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--text-secondary)]">OpenAI API Key</label>
                 <input 
@@ -137,7 +169,6 @@ export default function Page() {
                 />
               </div>
 
-              {/* Anthropic key */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[var(--text-secondary)]">Anthropic Claude Key</label>
                 <input 
@@ -150,7 +181,7 @@ export default function Page() {
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 mt-6 border-t border-[var(--color-border)] pt-5">
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 mt-2 border-t border-[var(--color-border)] pt-5">
               <button 
                 type="button" 
                 onClick={() => setShowKeysModal(false)}

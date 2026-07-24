@@ -7,9 +7,18 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   datasetName: string | null;
   onKeysClick: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, datasetName, onKeysClick }: SidebarProps) {
+export default function Sidebar({
+  activeTab,
+  setActiveTab,
+  datasetName,
+  onKeysClick,
+  isOpen = false,
+  onClose,
+}: SidebarProps) {
   const menuItems = [
     {
       id: "home",
@@ -67,40 +76,47 @@ export default function Sidebar({ activeTab, setActiveTab, datasetName, onKeysCl
     },
   ];
 
+  const goTo = (tab: string) => {
+    setActiveTab(tab);
+    onClose?.();
+  };
+
   return (
-    <div className="sidebar-layout select-none">
-      
-      {/* Brand Logo - Centered in navbar with redesigned curve line */}
-      <div 
-        className="relative cursor-pointer" 
-        onClick={() => setActiveTab("home")}
-        style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", marginBottom: "36px", marginTop: "8px" }}
+    <div className={`sidebar-layout select-none ${isOpen ? "is-open" : ""}`}>
+      <div
+        className="sidebar-brand-wrap relative cursor-pointer"
+        onClick={() => goTo("home")}
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          width: "100%",
+          marginBottom: "36px",
+          marginTop: "8px",
+        }}
       >
         <div style={{ position: "relative", display: "inline-block", paddingBottom: "10px", paddingRight: "48px" }}>
-          {/* Brand Text */}
-          <span 
-            style={{ 
-              fontSize: "36px", 
-              fontWeight: 300, 
-              color: "#1b1b1b", 
-              fontFamily: "'Outfit', sans-serif", 
-              letterSpacing: "0.5px", 
+          <span
+            style={{
+              fontSize: "36px",
+              fontWeight: 300,
+              color: "#1b1b1b",
+              fontFamily: "'Outfit', sans-serif",
+              letterSpacing: "0.5px",
               lineHeight: "1",
-              display: "block"
+              display: "block",
             }}
           >
             async
           </span>
 
-          {/* Redesigned Bold Continuous Curve Arrow */}
-          <svg 
-            width="155" 
-            height="44" 
-            viewBox="0 0 155 44" 
-            fill="none" 
+          <svg
+            width="155"
+            height="44"
+            viewBox="0 0 155 44"
+            fill="none"
             style={{ position: "absolute", left: "-2px", top: "4px", overflow: "visible", pointerEvents: "none" }}
           >
-            {/* Continuous Smooth Bold Underline + Upward Turn + Rightward Arrow Extension */}
             <path
               d="M 2 38 L 94 38 C 102 38 106 36 108 28 C 110 18 108 8 118 8 L 148 8"
               stroke="#ac7d58"
@@ -108,8 +124,6 @@ export default function Sidebar({ activeTab, setActiveTab, datasetName, onKeysCl
               strokeLinecap="round"
               strokeLinejoin="round"
             />
-
-            {/* Matching Bold Arrowhead */}
             <path
               d="M 141 3 L 149 8 L 141 13"
               stroke="#ac7d58"
@@ -119,11 +133,34 @@ export default function Sidebar({ activeTab, setActiveTab, datasetName, onKeysCl
             />
           </svg>
         </div>
+
+        <button
+          type="button"
+          className="sidebar-close-btn"
+          aria-label="Close menu"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose?.();
+          }}
+        >
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
-      {/* Navigation menu list */}
       <nav className="sidebar-nav">
-        <div style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#a1a1aa", letterSpacing: "0.05em", marginBottom: "12px", padding: "0 12px" }}>
+        <div
+          style={{
+            fontSize: "9px",
+            fontWeight: "bold",
+            textTransform: "uppercase",
+            color: "#a1a1aa",
+            letterSpacing: "0.05em",
+            marginBottom: "12px",
+            padding: "0 12px",
+          }}
+        >
           Main Workspace
         </div>
         {menuItems.map((item) => {
@@ -131,56 +168,118 @@ export default function Sidebar({ activeTab, setActiveTab, datasetName, onKeysCl
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              type="button"
+              onClick={() => goTo(item.id)}
               className={`sidebar-btn ${isActive ? "sidebar-btn-active" : "sidebar-btn-inactive"}`}
             >
-              <span className="sidebar-icon">
-                {item.icon}
-              </span>
+              <span className="sidebar-icon">{item.icon}</span>
               <span>{item.label}</span>
               {isActive && (
-                <div style={{ marginLeft: "auto", width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#ac7d58" }} />
+                <div
+                  style={{
+                    marginLeft: "auto",
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    backgroundColor: "#ac7d58",
+                  }}
+                />
               )}
             </button>
           );
         })}
       </nav>
 
-      {/* Active dataset display */}
       {datasetName && (
         <div className="sidebar-dataset-box">
-          <div style={{ fontSize: "9px", fontWeight: "bold", color: "#a1a1aa", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
+          <div
+            style={{
+              fontSize: "9px",
+              fontWeight: "bold",
+              color: "#a1a1aa",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              marginBottom: "8px",
+            }}
+          >
             Active Dataset
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "12px" }}>📄</span>
-            <span style={{ fontSize: "11px", fontWeight: "600", color: "#1b1b1b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "150px" }} title={datasetName}>
+            <span
+              style={{
+                fontSize: "11px",
+                fontWeight: "600",
+                color: "#1b1b1b",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: "150px",
+              }}
+              title={datasetName}
+            >
               {datasetName}
             </span>
           </div>
         </div>
       )}
 
-      {/* API credentials & Profile footer */}
       <div className="sidebar-profile">
         <button
-          onClick={onKeysClick}
+          type="button"
+          onClick={() => {
+            onKeysClick();
+            onClose?.();
+          }}
           className="btn-primary"
           style={{ width: "100%", padding: "10px 16px", borderRadius: "9999px", fontSize: "0.8rem", fontWeight: "bold" }}
         >
           API Credentials
         </button>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "0 4px", marginTop: "4px" }}>
-          <div style={{ width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#ac7d58", display: "flex", alignItems: "center", justifyOrigin: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: "bold", color: "#ffffff" }}>
+          <div
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              backgroundColor: "#ac7d58",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.8rem",
+              fontWeight: "bold",
+              color: "#ffffff",
+            }}
+          >
             U
           </div>
           <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <span style={{ fontSize: "12px", fontWeight: "bold", color: "#1b1b1b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Workspace</span>
-            <span style={{ fontSize: "10px", color: "#a1a1aa", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>dev@async.ai</span>
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: "bold",
+                color: "#1b1b1b",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Workspace
+            </span>
+            <span
+              style={{
+                fontSize: "10px",
+                color: "#a1a1aa",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              dev@async.ai
+            </span>
           </div>
         </div>
       </div>
-
     </div>
   );
 }

@@ -253,7 +253,7 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col p-8 overflow-y-auto h-full gap-8 bg-transparent select-none text-left">
+    <div className="page-section flex-1 flex flex-col p-4 sm:p-6 md:p-8 overflow-y-auto h-full gap-6 md:gap-8 bg-transparent select-none text-left w-full">
       
       {/* Heading */}
       <div style={{ textAlign: "center", marginBottom: "16px" }}>

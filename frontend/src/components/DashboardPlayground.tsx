@@ -640,207 +640,119 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
+        height: "100%",
+        minHeight: 0,
         width: "100%",
         backgroundColor: "#f7f5f0",
         overflow: "hidden",
         position: "relative",
-        userSelect: "none"
+        userSelect: "none",
+        flex: 1,
       }}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
     >
       
       {/* 1. TOP NAVBAR */}
-      <div 
-        style={{
-          height: "52px",
-          width: "100%",
-          backgroundColor: "#ffffff",
-          borderBottom: "1px solid rgba(27, 27, 27, 0.08)",
-          padding: "0 20px",
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-          boxSizing: "border-box",
-          zIndex: 40,
-          flexShrink: 0,
-        }}
-      >
-        {/* Left Side: Back & Title */}
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <button 
+      <div className="playground-topbar">
+        <div className="playground-topbar-left">
+          <button
+            type="button"
             onClick={() => setActiveTab("home")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "#52525b",
-              fontSize: "13px",
-              fontWeight: 500
-            }}
+            className="playground-icon-btn"
+            title="Back"
+            aria-label="Back"
           >
-            <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg style={{ width: 16, height: 16 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
-            <span>Back</span>
+            <span className="playground-btn-label">Back</span>
           </button>
 
-          <span style={{ fontSize: "14px", fontWeight: 600, color: "#0c0c0e", letterSpacing: "-0.01em" }}>
-            Dashboard Playground
+          <span className="playground-title">
+            <span className="playground-title-full">Dashboard Playground</span>
+            <span className="playground-title-short">Playground</span>
           </span>
         </div>
 
-        {/* Right Side: Toolbar buttons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          
+        <div className="playground-topbar-actions">
           {saveSuccessMessage && (
-            <span style={{ fontSize: "11px", color: "#16a34a", backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", padding: "3px 8px", borderRadius: "12px", fontWeight: 600 }}>
-              {saveSuccessMessage}
-            </span>
+            <span className="playground-save-toast">{saveSuccessMessage}</span>
           )}
 
-          {/* Grid Selector */}
           <button
+            type="button"
+            className="playground-action-btn playground-action-primary playground-hide-mobile"
             onClick={() => {
-              setBackgroundStyle(prev => (prev === "dots" ? "grid" : prev === "grid" ? "blank" : "dots"));
+              setBackgroundStyle((prev) => (prev === "dots" ? "grid" : prev === "grid" ? "blank" : "dots"));
             }}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              backgroundColor: "#2563eb",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "16px",
-              padding: "5px 12px",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer"
-            }}
+            title="Toggle background"
           >
             <svg style={{ width: 13, height: 13 }} fill="currentColor" viewBox="0 0 20 20">
               <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
             </svg>
-            <span>{backgroundStyle === "dots" ? "Grid" : backgroundStyle === "grid" ? "Lines" : "Blank"}</span>
+            <span className="playground-btn-label">
+              {backgroundStyle === "dots" ? "Grid" : backgroundStyle === "grid" ? "Lines" : "Blank"}
+            </span>
           </button>
 
-          {/* Zoom controls */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#52525b" }}>
-            <button onClick={() => setZoomLevel(prev => Math.max(50, prev - 10))} style={{ background: "none", border: "none", cursor: "pointer", color: "#71717a", padding: "2px" }}>
+          <div className="playground-zoom playground-hide-mobile">
+            <button type="button" onClick={() => setZoomLevel((prev) => Math.max(50, prev - 10))} className="playground-icon-btn" title="Zoom out">
               <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM13.5 10.5h-6" />
               </svg>
             </button>
-            <span style={{ fontFamily: "monospace", fontSize: "12px", color: "#27272a", width: "36px", textAlign: "center" }}>{zoomLevel}%</span>
-            <button onClick={() => setZoomLevel(prev => Math.min(150, prev + 10))} style={{ background: "none", border: "none", cursor: "pointer", color: "#71717a", padding: "2px" }}>
+            <span className="playground-zoom-value">{zoomLevel}%</span>
+            <button type="button" onClick={() => setZoomLevel((prev) => Math.min(150, prev + 10))} className="playground-icon-btn" title="Zoom in">
               <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6" />
               </svg>
             </button>
           </div>
 
-          {/* Reset button */}
-          <button onClick={() => setWidgets([])} style={{ background: "none", border: "none", cursor: "pointer", color: "#71717a", padding: "4px" }} title="Clear canvas">
+          <button type="button" onClick={() => setWidgets([])} className="playground-icon-btn playground-hide-mobile" title="Clear canvas">
             <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
           </button>
 
-          {/* Move to Reports */}
-          <button 
+          <button
+            type="button"
             onClick={() => setActiveTab("reports")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "12px",
-              color: "#3f3f46",
-              fontWeight: 500,
-              padding: "4px 8px"
-            }}
+            className="playground-action-btn"
+            title="Move to Reports"
           >
-            <svg style={{ width: 14, height: 14, color: "#71717a" }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0-10.628a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5zm0 10.628a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z" />
             </svg>
-            <span>Move to Reports</span>
+            <span className="playground-btn-label">Move to Reports</span>
           </button>
 
-          {/* Preview */}
-          <button 
+          <button
+            type="button"
             onClick={() => setPreviewMode(!previewMode)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              backgroundColor: previewMode ? "#2563eb" : "transparent",
-              color: previewMode ? "#ffffff" : "#3f3f46",
-              border: "none",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "12px",
-              fontWeight: 500,
-              padding: "4px 10px"
-            }}
+            className={`playground-action-btn ${previewMode ? "is-active" : ""}`}
+            title="Preview"
           >
             <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span>Preview</span>
+            <span className="playground-btn-label">Preview</span>
           </button>
 
-          {/* Export */}
-          <button 
-            onClick={triggerExport}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              backgroundColor: "#ffffff",
-              border: "1px solid #e4e4e7",
-              borderRadius: "14px",
-              cursor: "pointer",
-              fontSize: "12px",
-              color: "#3f3f46",
-              fontWeight: 500,
-              padding: "5px 12px"
-            }}
-          >
-            <svg style={{ width: 14, height: 14, color: "#71717a" }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <button type="button" onClick={triggerExport} className="playground-action-btn playground-hide-sm" title="Export">
+            <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
             </svg>
-            <span>Export</span>
+            <span className="playground-btn-label">Export</span>
           </button>
 
-          {/* Save Button */}
-          <button 
-            onClick={handleSave}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              backgroundColor: "#2563eb",
-              color: "#ffffff",
-              border: "none",
-              borderRadius: "16px",
-              padding: "5px 16px",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: "pointer"
-            }}
-          >
+          <button type="button" onClick={handleSave} className="playground-action-btn playground-action-primary" title="Save">
             <svg style={{ width: 14, height: 14 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>Save</span>
+            <span className="playground-btn-label">Save</span>
           </button>
         </div>
       </div>
@@ -877,7 +789,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
           
           {/* Empty state message when no widgets on canvas */}
           {widgets.length === 0 && (
-            <div style={{ position: "absolute", top: "140px", left: "calc(50vw - 240px)", width: "480px" }}>
+            <div className="playground-empty-card" style={{ position: "absolute", top: "140px", left: "calc(50% - min(240px, 45vw))", width: "min(480px, calc(100vw - 32px))" }}>
               <div style={{ backgroundColor: "#ffffff", borderRadius: "20px", border: "1px solid #e4e4e7", padding: "36px", textAlign: "center", boxShadow: "0 10px 25px rgba(0,0,0,0.04)", display: "flex", flexDirection: "column", alignItems: "center", gap: "14px" }}>
                 <div style={{ width: 48, height: 48, borderRadius: "14px", backgroundColor: "#f4f4f5", display: "flex", alignItems: "center", justifyContent: "center", color: "#a1a1aa" }}>
                   <svg style={{ width: 24, height: 24 }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -1084,6 +996,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
           {/* 3. POPUP CHATBOT WINDOW */}
           {showChatbot && (
             <div 
+              className="playground-chatbot"
               style={{
                 position: "absolute",
                 left: `${chatbotPosition.x}px`,
@@ -1228,6 +1141,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
       {/* 4. CHARTS & WIDGETS SELECTION POPOVER */}
       {showChartsMenu && (
         <div 
+          className="charts-picker-panel"
           style={{
             position: "fixed",
             bottom: "100px",
@@ -1239,7 +1153,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
             border: "1px solid rgba(27, 27, 27, 0.1)",
             padding: "22px 24px",
             zIndex: 60,
-            width: "400px",
+            width: "min(400px, calc(100vw - 24px))",
             display: "flex",
             flexDirection: "column",
             gap: "16px"
@@ -1250,7 +1164,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
             <div style={{ fontSize: "12px", color: "#71717a", marginTop: "2px" }}>Choose a visualization type</div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px" }}>
+          <div className="charts-picker-grid" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px" }}>
             {[
               { type: "bar", label: "Bar", icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.25C3 12.5596 3.55964 12 4.25 12H6.75C7.44036 12 8 12.5596 8 13.25V18.75C8 19.4404 7.44036 20 6.75 20H4.25C3.55964 20 3 19.4404 3 18.75V13.25ZM9 8.25C9 7.55964 9.55964 7 10.25 7H12.75C13.4404 7 14 7.55964 14 8.25V18.75C14 19.4404 13.4404 20 12.75 20H10.25C9.55964 20 9 19.4404 9 18.75V8.25ZM15 4.25C15 3.55964 15.5596 3 16.25 3H18.75C19.4404 3 20 3.55964 20 4.25V18.75C20 19.4404 19.4404 20 18.75 20H16.25C15.5596 20 15 19.4404 15 18.75V4.25Z" /> },
               { type: "line", label: "Line", icon: <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941" /> },
@@ -1291,24 +1205,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
 
       {/* 5. FLOATING BOTTOM CAPSULE TOOLBAR - Larger, soft rounded square buttons */}
       {!previewMode && (
-        <div 
-          style={{
-            position: "fixed",
-            bottom: "24px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "rgba(255, 255, 255, 0.98)",
-            backdropFilter: "blur(16px)",
-            border: "1px solid rgba(27, 27, 27, 0.12)",
-            padding: "8px 14px",
-            borderRadius: "28px",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            boxShadow: "0 12px 36px rgba(0,0,0,0.12)",
-            zIndex: 50
-          }}
-        >
+        <div className="playground-bottom-bar">
           {/* 1. File Folder Button */}
           <button 
             onClick={() => setActiveTab("datasources")}
@@ -1357,6 +1254,13 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
           <button 
             onClick={() => {
               setShowChatbot(!showChatbot);
+              if (!showChatbot && typeof window !== "undefined" && window.innerWidth <= 768) {
+                setChatbotPosition({ x: 12, y: 72 });
+                setChatbotSize({
+                  width: Math.min(360, window.innerWidth - 24),
+                  height: Math.min(420, window.innerHeight - 180),
+                });
+              }
               bringToFront("chatbot");
             }}
             style={{

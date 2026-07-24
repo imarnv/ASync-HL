@@ -18,7 +18,7 @@ export default function Home({ setActiveTab, datasetLoaded, filename }: HomeProp
       </span>
 
       {/* Welcome Title */}
-      <h1 className="text-5xl md:text-6xl font-normal leading-[1.15] text-[#1b1b1b] text-center max-w-3xl mb-6">
+      <h1 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-[1.15] text-[#1b1b1b] text-center max-w-3xl mb-6 px-1">
         Welcome to <span className="text-[#ac7d58] italic font-normal">async</span>
       </h1>
 
@@ -99,9 +99,9 @@ export default function Home({ setActiveTab, datasetLoaded, filename }: HomeProp
 
       {/* Loaded Dataset Banner */}
       {datasetLoaded && filename && (
-        <div className="mt-12 p-3 bg-zinc-50 border border-zinc-200/60 rounded-full flex items-center gap-3 px-5 text-xs text-zinc-600">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span>Active dataset: <strong>{filename}</strong></span>
+        <div className="mt-12 p-3 bg-zinc-50 border border-zinc-200/60 rounded-2xl sm:rounded-full flex items-center gap-3 px-5 text-xs text-zinc-600 max-w-full">
+          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
+          <span className="truncate">Active dataset: <strong>{filename}</strong></span>
         </div>
       )}
 

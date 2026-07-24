@@ -115,10 +115,10 @@ ${sampleRows}`;
   };
 
   return (
-    <div className="glass-panel flex-1 flex flex-col overflow-hidden select-none text-left" style={{ height: "100%", maxHeight: "640px", backgroundColor: "#ffffff", boxShadow: "var(--shadow-medium)" }}>
+    <div className="glass-panel flex-1 flex flex-col overflow-hidden select-none text-left w-full" style={{ height: "min(640px, calc(100dvh - 120px))", maxHeight: "640px", backgroundColor: "#ffffff", boxShadow: "var(--shadow-medium)" }}>
       
       {/* Header Panel */}
-      <div style={{ borderBottom: "1px solid rgba(172, 125, 88, 0.15)", padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "#ffffff" }}>
+      <div className="chat-header-row" style={{ borderBottom: "1px solid rgba(172, 125, 88, 0.15)", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "#ffffff", gap: "12px" }}>
         <div>
           <h2 style={{ fontSize: "20px", fontWeight: "bold", color: "#0c0c0e" }} className="serif-text">Excel Chat Workspace</h2>
           <p style={{ color: "#52525b", fontSize: "12px", marginTop: "2px" }}>
@@ -126,7 +126,7 @@ ${sampleRows}`;
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div className="chat-model-controls" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <select 
             value={modelCategory} 
             onChange={handleModelCategoryChange}

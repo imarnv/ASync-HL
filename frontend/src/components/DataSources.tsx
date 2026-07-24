@@ -97,7 +97,7 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
   };
 
   return (
-    <div className="flex-1 flex flex-col p-8 overflow-y-auto h-full gap-8 bg-transparent select-none text-left">
+    <div className="page-section flex-1 flex flex-col p-4 sm:p-6 md:p-8 overflow-y-auto h-full gap-6 md:gap-8 bg-transparent select-none text-left w-full">
       
       {/* Centered Heading */}
       <div style={{ textAlign: "center", marginBottom: "16px" }}>
@@ -241,7 +241,7 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
             <span style={{ fontSize: "10px", color: "#a1a1aa" }}>Showing first {Math.min(activeDataset.rows.length, 50)} rows</span>
           </div>
 
-          <div style={{ width: "100%", border: "1px solid rgba(27,27,27,0.06)", borderRadius: "12px", overflowX: "auto", overflowY: "auto", maxHeight: "320px", backgroundColor: "rgba(255, 255, 255, 0.4)" }}>
+          <div className="preview-table-wrap" style={{ width: "100%", border: "1px solid rgba(27,27,27,0.06)", borderRadius: "12px", overflowX: "auto", overflowY: "auto", maxHeight: "320px", backgroundColor: "rgba(255, 255, 255, 0.4)" }}>
             {activeDataset.fileType === "pdf" ? (
               <pre style={{ padding: "24px", fontSize: "12px", fontFamily: "monospace", color: "#5e5e5e", whiteSpace: "pre-wrap", lineHeight: "1.6" }}>
                 {activeDataset.rows[0]?.[0]}
