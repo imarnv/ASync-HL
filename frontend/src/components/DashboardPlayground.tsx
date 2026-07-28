@@ -268,10 +268,10 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
     };
 
     const colorMap: Record<string, string> = {
-      bar: "#ac7d58",
+      bar: "#50381f",
       line: "#8b5cf6",
       area: "#2563eb",
-      pie: "#dfc5ab",
+      pie: "#c9b99e",
       scatter: "#ec4899",
       gauge: "#10b981",
       funnel: "#f59e0b",
@@ -362,7 +362,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
           backgroundColor: isArea
             ? `${widget.color}20`
             : widget.type === "pie"
-              ? ["#ac7d58", "#1b1b1b", "#b98a60", "#e2d2c2", "#dfc5ab", "#8f8f8f", "#10b981", "#0ea5e9"].slice(0, labels.length)
+              ? ["#50381f", "#1e1a16", "#a88060", "#e2ddd5", "#c9b99e", "#8f8f8f", "#10b981", "#0ea5e9"].slice(0, labels.length)
               : widget.color,
           borderWidth: 2,
           fill: isArea,
@@ -383,18 +383,18 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
         legend: { display: false },
         tooltip: {
           backgroundColor: "#ffffff",
-          titleColor: "#1b1b1b",
+          titleColor: "#1e1a16",
           bodyColor: "#5e5e5e",
-          borderColor: "rgba(27, 27, 27, 0.08)",
+          borderColor: "rgba(30, 26, 22, 0.08)",
           borderWidth: 1,
         },
       },
       scales: (widget.type !== "pie" && widget.type !== "scatter") ? {
-        x: { grid: { color: "rgba(27, 27, 27, 0.03)" }, ticks: { color: "#8e8e8e", font: { size: 9 } } },
-        y: { grid: { color: "rgba(27, 27, 27, 0.03)" }, ticks: { color: "#8e8e8e", font: { size: 9 } } },
+        x: { grid: { color: "rgba(30, 26, 22, 0.03)" }, ticks: { color: "#8e8e8e", font: { size: 9 } } },
+        y: { grid: { color: "rgba(30, 26, 22, 0.03)" }, ticks: { color: "#8e8e8e", font: { size: 9 } } },
       } : widget.type === "scatter" ? {
-        x: { type: "linear" as const, position: "bottom" as const, grid: { color: "rgba(27, 27, 27, 0.03)" }, ticks: { color: "#8e8e8e", font: { size: 9 } } },
-        y: { grid: { color: "rgba(27, 27, 27, 0.03)" }, ticks: { color: "#8e8e8e", font: { size: 9 } } }
+        x: { type: "linear" as const, position: "bottom" as const, grid: { color: "rgba(30, 26, 22, 0.03)" }, ticks: { color: "#8e8e8e", font: { size: 9 } } },
+        y: { grid: { color: "rgba(30, 26, 22, 0.03)" }, ticks: { color: "#8e8e8e", font: { size: 9 } } }
       } : undefined,
     };
   };
@@ -453,7 +453,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
             />
           </svg>
           <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "flex-end", justifyContent: "center", paddingBottom: 6 }}>
-            <span style={{ fontSize: 22, fontWeight: 800, color: "#1b1b1b" }}>
+            <span style={{ fontSize: 22, fontWeight: 800, color: "#1e1a16" }}>
               {ratio}%
             </span>
           </div>
@@ -528,11 +528,11 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
     return (
       <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f4f4f5", borderRadius: "12px", overflow: "hidden" }}>
         <svg viewBox="0 0 220 120" style={{ width: "100%", height: "100%", opacity: 0.35 }}>
-          <path d="M 25 20 C 30 15, 60 20, 55 45 C 50 50, 45 40, 25 20 Z" fill="#ac7d58" />
-          <path d="M 50 55 C 60 65, 70 85, 60 95 C 55 85, 45 65, 50 55 Z" fill="#ac7d58" />
-          <path d="M 90 48 C 110 48, 120 60, 110 80 C 105 85, 95 70, 90 48 Z" fill="#ac7d58" />
-          <path d="M 85 25 C 100 20, 110 30, 95 38 C 90 35, 85 30, 85 25 Z" fill="#ac7d58" />
-          <path d="M 120 20 C 160 15, 180 35, 175 60 C 160 65, 140 45, 120 20 Z" fill="#ac7d58" />
+          <path d="M 25 20 C 30 15, 60 20, 55 45 C 50 50, 45 40, 25 20 Z" fill="#50381f" />
+          <path d="M 50 55 C 60 65, 70 85, 60 95 C 55 85, 45 65, 50 55 Z" fill="#50381f" />
+          <path d="M 90 48 C 110 48, 120 60, 110 80 C 105 85, 95 70, 90 48 Z" fill="#50381f" />
+          <path d="M 85 25 C 100 20, 110 30, 95 38 C 90 35, 85 30, 85 25 Z" fill="#50381f" />
+          <path d="M 120 20 C 160 15, 180 35, 175 60 C 160 65, 140 45, 120 20 Z" fill="#50381f" />
         </svg>
 
         {catData.map((label, idx) => {
@@ -643,7 +643,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
         height: "100%",
         minHeight: 0,
         width: "100%",
-        backgroundColor: "#f7f5f0",
+        backgroundColor: "#f7f4ef",
         overflow: "hidden",
         position: "relative",
         userSelect: "none",
@@ -764,12 +764,12 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
           overflow: "auto",
           position: "relative",
           width: "100%",
-          backgroundColor: "#f7f5f0",
+          backgroundColor: "#f7f4ef",
           ...((backgroundStyle === "dots" && {
-            backgroundImage: "radial-gradient(rgba(27, 27, 27, 0.15) 1.2px, transparent 1.2px)",
+            backgroundImage: "radial-gradient(rgba(30, 26, 22, 0.15) 1.2px, transparent 1.2px)",
             backgroundSize: "20px 20px"
           }) || (backgroundStyle === "grid" && {
-            backgroundImage: "linear-gradient(rgba(27, 27, 27, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(27, 27, 27, 0.05) 1px, transparent 1px)",
+            backgroundImage: "linear-gradient(rgba(30, 26, 22, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 26, 22, 0.05) 1px, transparent 1px)",
             backgroundSize: "20px 20px"
           }) || {})
         }}
@@ -829,7 +829,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
                   backgroundColor: "#ffffff",
                   borderRadius: "20px",
                   boxShadow: "0 8px 24px rgba(0,0,0,0.06)",
-                  border: "1px solid rgba(27, 27, 27, 0.08)",
+                  border: "1px solid rgba(30, 26, 22, 0.08)",
                   display: "flex",
                   flexDirection: "column",
                   overflow: "hidden"
@@ -1027,7 +1027,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
                   cursor: "move"
                 }}
               >
-                <span style={{ fontSize: "13px", fontWeight: 600, color: "#27272a" }}>AI Assistant</span>
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "#4a453e" }}>AI Assistant</span>
                 <button 
                   onClick={() => setShowChatbot(false)}
                   style={{ background: "none", border: "none", cursor: "pointer", color: "#a1a1aa", padding: "2px" }}
@@ -1052,7 +1052,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
                           maxWidth: "85%",
                           lineHeight: "1.5",
                           backgroundColor: isUser ? "#2563eb" : "#ffffff",
-                          color: isUser ? "#ffffff" : "#27272a",
+                          color: isUser ? "#ffffff" : "#4a453e",
                           border: isUser ? "none" : "1px solid #e4e4e7",
                           boxShadow: "0 2px 6px rgba(0,0,0,0.02)"
                         }}
@@ -1150,7 +1150,7 @@ export default function DashboardPlayground({ activeDataset, setActiveTab }: Das
             backgroundColor: "#ffffff",
             borderRadius: "28px",
             boxShadow: "0 20px 48px rgba(0,0,0,0.16)",
-            border: "1px solid rgba(27, 27, 27, 0.1)",
+            border: "1px solid rgba(30, 26, 22, 0.1)",
             padding: "22px 24px",
             zIndex: 60,
             width: "min(400px, calc(100vw - 24px))",

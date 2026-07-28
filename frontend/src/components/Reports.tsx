@@ -23,7 +23,7 @@ export default function Reports({ activeDataset }: ReportsProps) {
       
       <div className="reports-header print:hidden">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-normal text-[#1b1b1b] mb-1">Export Reports</h1>
+          <h1 className="text-2xl sm:text-3xl font-normal text-[#1e1a16] mb-1">Export Reports</h1>
           <p className="text-zinc-500 text-sm leading-relaxed">
             Compile and print clean summaries of your dataset columns and performance indicators.
           </p>
@@ -48,7 +48,7 @@ export default function Reports({ activeDataset }: ReportsProps) {
             </svg>
           </div>
           <div>
-            <h3 className="text-base font-bold text-[#1b1b1b]">No Connected Dataset</h3>
+            <h3 className="text-base font-bold text-[#1e1a16]">No Connected Dataset</h3>
             <p className="text-xs text-zinc-400 mt-1 max-w-xs mx-auto">
               Connect a data source under the <strong>Data Sources</strong> section to compile an exportable report page.
             </p>
@@ -116,7 +116,7 @@ export default function Reports({ activeDataset }: ReportsProps) {
                       
                       return (
                         <tr key={idx}>
-                          <td className="font-semibold text-[#1b1b1b]">{header}</td>
+                          <td className="font-semibold text-[#1e1a16]">{header}</td>
                           <td>{typeGuess}</td>
                           <td className="reports-sample" title={sampleCell === null ? "null" : String(sampleCell)}>
                             {sampleCell === null ? "null" : String(sampleCell)}

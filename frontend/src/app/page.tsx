@@ -90,7 +90,16 @@ export default function Page() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="mobile-topbar-brand">async</span>
+          <span className="mobile-topbar-brand">
+            <img
+              src="/heuristic-labs-logo.png"
+              alt="Heuristic Labs"
+              width={28}
+              height={28}
+              className="mobile-topbar-logo"
+            />
+            async
+          </span>
         </header>
       
         {activeTab === "playground" ? (
@@ -131,7 +140,7 @@ export default function Page() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 select-none">
           <div className="glass-panel w-full max-w-md p-6 sm:p-8 flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200 bg-white max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-4">
-              <h3 className="text-xl font-bold text-[#1b1b1b]">AI Credentials</h3>
+              <h3 className="text-xl font-bold text-[#1e1a16]">AI Credentials</h3>
               <button 
                 onClick={() => setShowKeysModal(false)}
                 className="text-[var(--text-muted)] hover:text-black"

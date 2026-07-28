@@ -146,8 +146,8 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
       datasets.push({
         label: "Data Points",
         data: points,
-        backgroundColor: "rgba(27, 27, 27, 0.4)",
-        borderColor: "#1b1b1b",
+        backgroundColor: "rgba(30, 26, 22, 0.4)",
+        borderColor: "#1e1a16",
         borderWidth: 1,
         pointRadius: 5,
         type: "scatter" as const,
@@ -157,7 +157,7 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
         label: "Regression Line",
         data: regressionResult.trendline,
         type: "line" as const,
-        borderColor: "#ac7d58",
+        borderColor: "#50381f",
         backgroundColor: "transparent",
         borderWidth: 2.5,
         pointRadius: 0,
@@ -168,7 +168,7 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
     
     else if (activeTool === "kmeans" && kmeansResult) {
       const clustersCount = kValue;
-      const colors = ["#ac7d58", "#1b1b1b", "#8a6649", "#5e5e5e", "#dfc5ab", "#8e8e8e"];
+      const colors = ["#50381f", "#1e1a16", "#7a5c3c", "#5e5e5e", "#c9b99e", "#8e8e8e"];
       
       for (let c = 0; c < clustersCount; c++) {
         const clusterPoints = points.filter((_, idx) => kmeansResult.assignments[idx] === c);
@@ -187,7 +187,7 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
         label: "Centroids",
         data: kmeansResult.centroids,
         backgroundColor: "#ffffff",
-        borderColor: "#1b1b1b",
+        borderColor: "#1e1a16",
         borderWidth: 2.5,
         pointRadius: 8,
         pointStyle: "rectRot",
@@ -199,8 +199,8 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
       datasets.push({
         label: "Raw Points",
         data: points,
-        backgroundColor: "rgba(27, 27, 27, 0.2)",
-        borderColor: "rgba(27, 27, 27, 0.4)",
+        backgroundColor: "rgba(30, 26, 22, 0.2)",
+        borderColor: "rgba(30, 26, 22, 0.4)",
         borderWidth: 1,
         pointRadius: 5,
         type: "scatter" as const,
@@ -222,9 +222,9 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
       },
       tooltip: {
         backgroundColor: "#ffffff",
-        titleColor: "#1b1b1b",
+        titleColor: "#1e1a16",
         bodyColor: "#5e5e5e",
-        borderColor: "rgba(27, 27, 27, 0.08)",
+        borderColor: "rgba(30, 26, 22, 0.08)",
         borderWidth: 1,
       },
     },
@@ -236,7 +236,7 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
           color: "#5e5e5e",
           font: { family: "Outfit", size: 11, weight: "bold" as const },
         },
-        grid: { color: "rgba(27, 27, 27, 0.03)" },
+        grid: { color: "rgba(30, 26, 22, 0.03)" },
         ticks: { color: "#8e8e8e", font: { family: "Outfit", size: 10 } },
       },
       y: {
@@ -246,7 +246,7 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
           color: "#5e5e5e",
           font: { family: "Outfit", size: 11, weight: "bold" as const },
         },
-        grid: { color: "rgba(27, 27, 27, 0.03)" },
+        grid: { color: "rgba(30, 26, 22, 0.03)" },
         ticks: { color: "#8e8e8e", font: { family: "Outfit", size: 10 } },
       },
     },
@@ -257,21 +257,21 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
       
       {/* Heading */}
       <div style={{ textAlign: "center", marginBottom: "16px" }}>
-        <h1 className="text-3xl font-normal text-[#1b1b1b] mb-1">ML Studio</h1>
+        <h1 className="text-3xl font-normal text-[#1e1a16] mb-1">ML Studio</h1>
         <p className="text-zinc-500 text-sm max-w-lg mx-auto leading-relaxed">
           Execute linear regressions and clustering models to analyze numeric row patterns.
         </p>
       </div>
 
       {!activeDataset ? (
-        <div style={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "48px", border: "1px dashed rgba(27,27,27,0.08)", borderRadius: "16px", maxWidth: "560px", margin: "48px auto", gap: "16px", backgroundColor: "rgba(255, 255, 255, 0.45)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-soft)", width: "100%" }}>
-          <div style={{ width: "56px", height: "56px", borderRadius: "50%", backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(27,27,27,0.06)", color: "#a1a1aa" }}>
+        <div style={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "48px", border: "1px dashed rgba(30, 26, 22,0.08)", borderRadius: "16px", maxWidth: "560px", margin: "48px auto", gap: "16px", backgroundColor: "rgba(255, 255, 255, 0.45)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-soft)", width: "100%" }}>
+          <div style={{ width: "56px", height: "56px", borderRadius: "50%", backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(30, 26, 22,0.06)", color: "#a1a1aa" }}>
             <svg className="icon-medium" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
           </div>
           <div>
-            <h3 style={{ fontSize: "16px", fontWeight: "bold", color: "#1b1b1b" }}>No Connected Dataset</h3>
+            <h3 style={{ fontSize: "16px", fontWeight: "bold", color: "#1e1a16" }}>No Connected Dataset</h3>
             <p style={{ fontSize: "12px", color: "#a1a1aa", marginTop: "4px", maxWidth: "320px", marginLeft: "auto", marginRight: "auto" }}>
               Please upload a spreadsheet under the <strong>Data Sources</strong> section first before launching ML analytics.
             </p>
@@ -282,10 +282,10 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
           
           {/* Settings Left Column */}
           <div className="col-4 flex flex-col gap-5">
-            <div style={{ border: "1px solid rgba(27,27,27,0.08)", borderRadius: "16px", padding: "24px", display: "flex", flexDirection: "column", gap: "16px", backgroundColor: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-soft)" }}>
+            <div style={{ border: "1px solid rgba(30, 26, 22,0.08)", borderRadius: "16px", padding: "24px", display: "flex", flexDirection: "column", gap: "16px", backgroundColor: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-soft)" }}>
               
               {/* Tab Selector */}
-              <div style={{ display: "flex", backgroundColor: "rgba(27,27,27,0.04)", padding: "4px", borderRadius: "8px", border: "1px solid rgba(27,27,27,0.04)" }}>
+              <div style={{ display: "flex", backgroundColor: "rgba(30, 26, 22,0.04)", padding: "4px", borderRadius: "8px", border: "1px solid rgba(30, 26, 22,0.04)" }}>
                 <button
                   onClick={() => {
                     setActiveTool("regression");
@@ -298,9 +298,9 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
                     fontSize: "11px",
                     fontWeight: "bold",
                     borderRadius: "6px",
-                    border: activeTool === "regression" ? "1px solid rgba(27,27,27,0.08)" : "none",
+                    border: activeTool === "regression" ? "1px solid rgba(30, 26, 22,0.08)" : "none",
                     backgroundColor: activeTool === "regression" ? "#ffffff" : "transparent",
-                    color: activeTool === "regression" ? "#ac7d58" : "#5e5e5e",
+                    color: activeTool === "regression" ? "#50381f" : "#5e5e5e",
                     cursor: "pointer"
                   }}
                 >
@@ -318,9 +318,9 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
                     fontSize: "11px",
                     fontWeight: "bold",
                     borderRadius: "6px",
-                    border: activeTool === "kmeans" ? "1px solid rgba(27,27,27,0.08)" : "none",
+                    border: activeTool === "kmeans" ? "1px solid rgba(30, 26, 22,0.08)" : "none",
                     backgroundColor: activeTool === "kmeans" ? "#ffffff" : "transparent",
-                    color: activeTool === "kmeans" ? "#ac7d58" : "#5e5e5e",
+                    color: activeTool === "kmeans" ? "#50381f" : "#5e5e5e",
                     cursor: "pointer"
                   }}
                 >
@@ -392,24 +392,24 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
 
             {/* Metrics report */}
             {(regressionResult || kmeansResult) && (
-              <div style={{ border: "1px solid rgba(27,27,27,0.08)", borderRadius: "16px", padding: "24px", backgroundColor: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-soft)" }}>
+              <div style={{ border: "1px solid rgba(30, 26, 22,0.08)", borderRadius: "16px", padding: "24px", backgroundColor: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-soft)" }}>
                 <span style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#a1a1aa", letterSpacing: "0.05em" }}>Model Report</span>
                 
                 {activeTool === "regression" && regressionResult && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "12px", marginTop: "12px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(27,27,27,0.04)", paddingBottom: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(30, 26, 22,0.04)", paddingBottom: "8px" }}>
                       <span style={{ color: "#5e5e5e" }}>Slope (m)</span>
-                      <span style={{ fontFamily: "monospace", fontWeight: "bold", color: "#1b1b1b" }}>{regressionResult.slope.toFixed(4)}</span>
+                      <span style={{ fontFamily: "monospace", fontWeight: "bold", color: "#1e1a16" }}>{regressionResult.slope.toFixed(4)}</span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(27,27,27,0.04)", paddingBottom: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(30, 26, 22,0.04)", paddingBottom: "8px" }}>
                       <span style={{ color: "#5e5e5e" }}>Intercept (c)</span>
-                      <span style={{ fontFamily: "monospace", fontWeight: "bold", color: "#1b1b1b" }}>{regressionResult.intercept.toFixed(4)}</span>
+                      <span style={{ fontFamily: "monospace", fontWeight: "bold", color: "#1e1a16" }}>{regressionResult.intercept.toFixed(4)}</span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(27,27,27,0.04)", paddingBottom: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(30, 26, 22,0.04)", paddingBottom: "8px" }}>
                       <span style={{ color: "#5e5e5e" }}>R² Coefficient</span>
-                      <span style={{ fontFamily: "monospace", fontWeight: "bold", color: "#ac7d58" }}>{regressionResult.r_squared.toFixed(4)}</span>
+                      <span style={{ fontFamily: "monospace", fontWeight: "bold", color: "#50381f" }}>{regressionResult.r_squared.toFixed(4)}</span>
                     </div>
-                    <div style={{ fontSize: "10px", color: "#a1a1aa", lineHeight: "1.5", marginTop: "4px", backgroundColor: "#faf6f0", padding: "10px", borderRadius: "8px", fontFamily: "monospace" }}>
+                    <div style={{ fontSize: "10px", color: "#a1a1aa", lineHeight: "1.5", marginTop: "4px", backgroundColor: "#ece6d9", padding: "10px", borderRadius: "8px", fontFamily: "monospace" }}>
                       Y = {regressionResult.slope.toFixed(3)} * X + {regressionResult.intercept.toFixed(3)}
                     </div>
                   </div>
@@ -419,9 +419,9 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "12px", marginTop: "12px" }}>
                     <span style={{ color: "#5e5e5e", fontWeight: "bold" }}>Computed Cluster Centers:</span>
                     {kmeansResult.centroids.map((c, idx) => (
-                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(27,27,27,0.04)", paddingBottom: "8px", fontFamily: "monospace" }}>
+                      <div key={idx} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid rgba(30, 26, 22,0.04)", paddingBottom: "8px", fontFamily: "monospace" }}>
                         <span style={{ color: "#a1a1aa" }}>Centroid {idx + 1}</span>
-                        <span style={{ fontWeight: "bold", color: "#1b1b1b" }}>({c.x.toFixed(2)}, {c.y.toFixed(2)})</span>
+                        <span style={{ fontWeight: "bold", color: "#1e1a16" }}>({c.x.toFixed(2)}, {c.y.toFixed(2)})</span>
                       </div>
                     ))}
                   </div>
@@ -432,8 +432,8 @@ export default function MLStudio({ activeDataset }: MLStudioProps) {
 
           {/* Scatter Chart Right Column */}
           <div className="col-8 flex flex-col min-h-[440px]">
-            <div style={{ border: "1px solid rgba(27,27,27,0.08)", borderRadius: "16px", padding: "24px", height: "100%", display: "flex", flexDirection: "column", gap: "16px", backgroundColor: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(12px)", boxSizing: "border-box", boxShadow: "var(--shadow-soft)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(27,27,27,0.04)", paddingBottom: "8px" }}>
+            <div style={{ border: "1px solid rgba(30, 26, 22,0.08)", borderRadius: "16px", padding: "24px", height: "100%", display: "flex", flexDirection: "column", gap: "16px", backgroundColor: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(12px)", boxSizing: "border-box", boxShadow: "var(--shadow-soft)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(30, 26, 22,0.04)", paddingBottom: "8px" }}>
                 <span style={{ fontSize: "9px", fontWeight: "bold", textTransform: "uppercase", color: "#a1a1aa", letterSpacing: "0.05em" }}>Scatter Grouping Chart</span>
                 <span style={{ fontSize: "9px", color: "#a1a1aa" }}>Showing first 100 parsed data coordinates</span>
               </div>

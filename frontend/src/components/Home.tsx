@@ -13,13 +13,13 @@ export default function Home({ setActiveTab, datasetLoaded, filename }: HomeProp
     <div className="home-layout">
       
       {/* Small uppercase tag */}
-      <span className="text-[10px] uppercase font-bold tracking-widest text-[#ac7d58] mb-6">
+      <span className="text-[10px] uppercase font-bold tracking-widest text-[#50381f] mb-6">
         Applied Intelligence Playground
       </span>
 
       {/* Welcome Title */}
-      <h1 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-[1.15] text-[#1b1b1b] text-center max-w-3xl mb-6 px-1">
-        Welcome to <span className="text-[#ac7d58] italic font-normal">async</span>
+      <h1 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-[1.15] text-[#1e1a16] text-center max-w-3xl mb-6 px-1">
+        Welcome to <span className="text-[#50381f] italic font-normal">async</span>
       </h1>
 
       {/* Subdescription */}
@@ -60,7 +60,7 @@ export default function Home({ setActiveTab, datasetLoaded, filename }: HomeProp
           <span className="text-[9px] uppercase font-bold tracking-wider text-zinc-400 mb-2">
             Datasets Parsed
           </span>
-          <span className="text-3xl font-normal text-[#1b1b1b] serif-text">
+          <span className="text-3xl font-normal text-[#1e1a16] serif-text">
             10,000+
           </span>
         </div>
@@ -70,7 +70,7 @@ export default function Home({ setActiveTab, datasetLoaded, filename }: HomeProp
           <span className="text-[9px] uppercase font-bold tracking-wider text-zinc-400 mb-2">
             Average Parse Speed
           </span>
-          <span className="text-3xl font-normal text-[#1b1b1b] serif-text">
+          <span className="text-3xl font-normal text-[#1e1a16] serif-text">
             &lt; 200ms
           </span>
         </div>
@@ -80,7 +80,7 @@ export default function Home({ setActiveTab, datasetLoaded, filename }: HomeProp
           <span className="text-[9px] uppercase font-bold tracking-wider text-zinc-400 mb-2">
             Analytics Accuracy
           </span>
-          <span className="text-3xl font-normal text-[#1b1b1b] serif-text">
+          <span className="text-3xl font-normal text-[#1e1a16] serif-text">
             100%
           </span>
         </div>
@@ -90,7 +90,7 @@ export default function Home({ setActiveTab, datasetLoaded, filename }: HomeProp
           <span className="text-[9px] uppercase font-bold tracking-wider text-zinc-400 mb-2">
             AI Models Available
           </span>
-          <span className="text-3xl font-normal text-[#1b1b1b] serif-text">
+          <span className="text-3xl font-normal text-[#1e1a16] serif-text">
             8+ models
           </span>
         </div>

@@ -118,9 +118,9 @@ ${sampleRows}`;
     <div className="glass-panel flex-1 flex flex-col overflow-hidden select-none text-left w-full" style={{ height: "min(640px, calc(100dvh - 120px))", maxHeight: "640px", backgroundColor: "#ffffff", boxShadow: "var(--shadow-medium)" }}>
       
       {/* Header Panel */}
-      <div className="chat-header-row" style={{ borderBottom: "1px solid rgba(172, 125, 88, 0.15)", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "#ffffff", gap: "12px" }}>
+      <div className="chat-header-row" style={{ borderBottom: "1px solid rgba(80, 56, 31, 0.15)", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "#ffffff", gap: "12px" }}>
         <div>
-          <h2 style={{ fontSize: "20px", fontWeight: "bold", color: "#0c0c0e" }} className="serif-text">Excel Chat Workspace</h2>
+          <h2 style={{ fontSize: "20px", fontWeight: "bold", color: "#1e1a14" }} className="serif-text">Excel Chat Workspace</h2>
           <p style={{ color: "#52525b", fontSize: "12px", marginTop: "2px" }}>
             Query spreadsheets, request summaries, or inspect columns via AI.
           </p>
@@ -198,7 +198,7 @@ ${sampleRows}`;
         {loading && (
           <div className="flex flex-col items-start" style={{ width: "100%" }}>
             <div className="chat-bubble-ai flex items-center gap-2">
-              <svg className="animate-spin h-4 w-4 text-[#ac7d58]" fill="none" viewBox="0 0 24 24">
+              <svg className="animate-spin h-4 w-4 text-[#50381f]" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
@@ -211,7 +211,7 @@ ${sampleRows}`;
 
       {/* Dataset Alert */}
       {!activeDataset && (
-        <div style={{ margin: "12px 24px", padding: "12px", backgroundColor: "rgba(172, 125, 88, 0.05)", border: "1px solid rgba(172, 125, 88, 0.15)", borderRadius: "12px", color: "#ac7d58", fontSize: "11px", display: "flex", gap: "8px", alignItems: "center" }}>
+        <div style={{ margin: "12px 24px", padding: "12px", backgroundColor: "rgba(80, 56, 31, 0.05)", border: "1px solid rgba(80, 56, 31, 0.15)", borderRadius: "12px", color: "#50381f", fontSize: "11px", display: "flex", gap: "8px", alignItems: "center" }}>
           <svg className="icon-small" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -220,7 +220,7 @@ ${sampleRows}`;
       )}
 
       {/* Input bar */}
-      <form onSubmit={sendMessage} style={{ padding: "20px 24px", backgroundColor: "#ffffff", borderTop: "1px solid rgba(172, 125, 88, 0.15)", display: "flex", gap: "12px" }}>
+      <form onSubmit={sendMessage} style={{ padding: "20px 24px", backgroundColor: "#ffffff", borderTop: "1px solid rgba(80, 56, 31, 0.15)", display: "flex", gap: "12px" }}>
         <input
           type="text"
           value={input}

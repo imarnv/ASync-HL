@@ -93,14 +93,27 @@ export default function Sidebar({
           width: "100%",
           marginBottom: "36px",
           marginTop: "8px",
+          gap: "10px",
         }}
       >
+        <img
+          src="/heuristic-labs-logo.png"
+          alt="Heuristic Labs"
+          width={40}
+          height={40}
+          style={{
+            width: 40,
+            height: 40,
+            objectFit: "contain",
+            flexShrink: 0,
+          }}
+        />
         <div style={{ position: "relative", display: "inline-block", paddingBottom: "10px", paddingRight: "48px" }}>
           <span
             style={{
               fontSize: "36px",
               fontWeight: 300,
-              color: "#1b1b1b",
+              color: "#1e1a16",
               fontFamily: "'Outfit', sans-serif",
               letterSpacing: "0.5px",
               lineHeight: "1",
@@ -119,14 +132,14 @@ export default function Sidebar({
           >
             <path
               d="M 2 38 L 94 38 C 102 38 106 36 108 28 C 110 18 108 8 118 8 L 148 8"
-              stroke="#ac7d58"
+              stroke="#50381f"
               strokeWidth="3.2"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
             <path
               d="M 141 3 L 149 8 L 141 13"
-              stroke="#ac7d58"
+              stroke="#50381f"
               strokeWidth="2.8"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -181,7 +194,7 @@ export default function Sidebar({
                     width: "6px",
                     height: "6px",
                     borderRadius: "50%",
-                    backgroundColor: "#ac7d58",
+                    backgroundColor: "#50381f",
                   }}
                 />
               )}
@@ -210,7 +223,7 @@ export default function Sidebar({
               style={{
                 fontSize: "11px",
                 fontWeight: "600",
-                color: "#1b1b1b",
+                color: "#1e1a16",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -242,7 +255,7 @@ export default function Sidebar({
               width: "32px",
               height: "32px",
               borderRadius: "50%",
-              backgroundColor: "#ac7d58",
+              backgroundColor: "#50381f",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -258,7 +271,7 @@ export default function Sidebar({
               style={{
                 fontSize: "12px",
                 fontWeight: "bold",
-                color: "#1b1b1b",
+                color: "#1e1a16",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",

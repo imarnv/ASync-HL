@@ -101,7 +101,7 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
       
       {/* Centered Heading */}
       <div style={{ textAlign: "center", marginBottom: "16px" }}>
-        <h1 className="text-3xl font-normal text-[#1b1b1b] mb-2">Data Sources</h1>
+        <h1 className="text-3xl font-normal text-[#1e1a16] mb-2">Data Sources</h1>
         <p className="text-zinc-500 text-sm max-w-lg mx-auto leading-relaxed">
           Upload spreadsheets or PDF files to parse metrics and populate the dashboard.
         </p>
@@ -121,8 +121,8 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
             onDrop={handleDrop}
             className="upload-zone"
             style={{
-              borderColor: dragActive ? "#ac7d58" : "rgba(27,27,27,0.08)",
-              backgroundColor: dragActive ? "rgba(172,125,88,0.04)" : "rgba(255, 255, 255, 0.45)",
+              borderColor: dragActive ? "#50381f" : "rgba(30, 26, 22,0.08)",
+              backgroundColor: dragActive ? "rgba(80, 56, 31,0.04)" : "rgba(255, 255, 255, 0.45)",
               backdropFilter: "blur(12px)",
               boxShadow: "var(--shadow-soft)"
             }}
@@ -139,21 +139,21 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
             
             {loading ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-                <svg className="animate-spin h-8 w-8 text-[#ac7d58]" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin h-8 w-8 text-[#50381f]" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span style={{ fontSize: "12px", fontWeight: "600", color: "#1b1b1b" }}>Parsing columns...</span>
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#1e1a16" }}>Parsing columns...</span>
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
-                <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(27,27,27,0.08)" }}>
-                  <svg className="icon-medium" style={{ color: "#ac7d58" }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(30, 26, 22,0.08)" }}>
+                  <svg className="icon-medium" style={{ color: "#50381f" }} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                 </div>
                 <div>
-                  <span style={{ fontSize: "13px", fontWeight: "bold", color: "#1b1b1b", display: "block" }}>Drag & Drop files here</span>
+                  <span style={{ fontSize: "13px", fontWeight: "bold", color: "#1e1a16", display: "block" }}>Drag & Drop files here</span>
                   <span style={{ fontSize: "11px", color: "#a1a1aa", display: "block", marginTop: "4px" }}>CSV, XLSX, XLS, PDF up to 25MB</span>
                 </div>
                 <button type="button" className="btn-secondary" style={{ padding: "8px 18px", fontSize: "11px", borderRadius: "9999px" }}>
@@ -196,16 +196,16 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
                       padding: "12px",
                       borderRadius: "12px",
                       border: "1px solid",
-                      borderColor: activeDataset?.filename === file.name ? "#ac7d58" : "rgba(27,27,27,0.06)",
+                      borderColor: activeDataset?.filename === file.name ? "#50381f" : "rgba(30, 26, 22,0.06)",
                       backgroundColor: "#ffffff",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      boxShadow: activeDataset?.filename === file.name ? "0 2px 10px rgba(172, 125, 88, 0.05)" : "none"
+                      boxShadow: activeDataset?.filename === file.name ? "0 2px 10px rgba(80, 56, 31, 0.05)" : "none"
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#faf6f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: "32px", height: "32px", borderRadius: "8px", backgroundColor: "#ece6d9", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         {file.type === "pdf" ? (
                           <span style={{ fontSize: "11px", color: "#ef4444", fontWeight: "bold" }}>pdf</span>
                         ) : (
@@ -213,12 +213,12 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
                         )}
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
-                        <span style={{ fontSize: "12px", fontWeight: "600", color: "#1b1b1b" }}>{file.name}</span>
+                        <span style={{ fontSize: "12px", fontWeight: "600", color: "#1e1a16" }}>{file.name}</span>
                         <span style={{ fontSize: "10px", color: "#a1a1aa" }}>{file.rowsCount} records</span>
                       </div>
                     </div>
                     {activeDataset?.filename === file.name && (
-                      <span style={{ fontSize: "9px", padding: "2px 8px", borderRadius: "9999px", backgroundColor: "rgba(172, 125, 88, 0.1)", color: "#ac7d58", fontWeight: "bold" }}>
+                      <span style={{ fontSize: "9px", padding: "2px 8px", borderRadius: "9999px", backgroundColor: "rgba(80, 56, 31, 0.1)", color: "#50381f", fontWeight: "bold" }}>
                         Active
                       </span>
                     )}
@@ -232,16 +232,16 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
 
       {/* Spreadsheet / PDF Preview Area */}
       {activeDataset && (
-        <div style={{ border: "1px solid rgba(27,27,27,0.06)", borderRadius: "16px", padding: "24px", backgroundColor: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(12px)", width: "100%", maxWidth: "860px", margin: "16px auto 0 auto", boxSizing: "border-box", boxShadow: "var(--shadow-soft)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyOrigin: "space-between", justifyContent: "space-between", borderBottom: "1px solid rgba(27,27,27,0.04)", paddingBottom: "12px", marginBottom: "16px" }}>
+        <div style={{ border: "1px solid rgba(30, 26, 22,0.06)", borderRadius: "16px", padding: "24px", backgroundColor: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(12px)", width: "100%", maxWidth: "860px", margin: "16px auto 0 auto", boxSizing: "border-box", boxShadow: "var(--shadow-soft)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyOrigin: "space-between", justifyContent: "space-between", borderBottom: "1px solid rgba(30, 26, 22,0.04)", paddingBottom: "12px", marginBottom: "16px" }}>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <span style={{ fontSize: "10px", fontWeight: "bold", textTransform: "uppercase", color: "#a1a1aa", letterSpacing: "0.05em" }}>Spreadsheet Preview</span>
-              <span style={{ fontSize: "14px", fontWeight: "600", color: "#1b1b1b", marginTop: "2px" }}>{activeDataset.filename}</span>
+              <span style={{ fontSize: "14px", fontWeight: "600", color: "#1e1a16", marginTop: "2px" }}>{activeDataset.filename}</span>
             </div>
             <span style={{ fontSize: "10px", color: "#a1a1aa" }}>Showing first {Math.min(activeDataset.rows.length, 50)} rows</span>
           </div>
 
-          <div className="preview-table-wrap" style={{ width: "100%", border: "1px solid rgba(27,27,27,0.06)", borderRadius: "12px", overflowX: "auto", overflowY: "auto", maxHeight: "320px", backgroundColor: "rgba(255, 255, 255, 0.4)" }}>
+          <div className="preview-table-wrap" style={{ width: "100%", border: "1px solid rgba(30, 26, 22,0.06)", borderRadius: "12px", overflowX: "auto", overflowY: "auto", maxHeight: "320px", backgroundColor: "rgba(255, 255, 255, 0.4)" }}>
             {activeDataset.fileType === "pdf" ? (
               <pre style={{ padding: "24px", fontSize: "12px", fontFamily: "monospace", color: "#5e5e5e", whiteSpace: "pre-wrap", lineHeight: "1.6" }}>
                 {activeDataset.rows[0]?.[0]}
@@ -249,7 +249,7 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
             ) : (
               <table className="preview-table">
                 <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(27,27,27,0.06)" }}>
+                  <tr style={{ borderBottom: "1px solid rgba(30, 26, 22,0.06)" }}>
                     <th style={{ width: "48px", textAlign: "center", color: "#a1a1aa", fontFamily: "monospace", backgroundColor: "rgba(255, 255, 255, 0.4)" }}>#</th>
                     {activeDataset.headers.map((h, i) => (
                       <th key={i} style={{ backgroundColor: "rgba(255, 255, 255, 0.4)" }}>{h}</th>
@@ -259,7 +259,7 @@ export default function DataSources({ onDatasetLoaded, activeDataset }: DataSour
                 <tbody>
                   {activeDataset.rows.slice(0, 50).map((row, rowIdx) => (
                     <tr key={rowIdx}>
-                      <td style={{ width: "48px", textAlign: "center", color: "#a1a1aa", fontFamily: "monospace", fontSize: "11px", borderRight: "1px solid rgba(27,27,27,0.06)", backgroundColor: "rgba(255, 255, 255, 0.3)" }}>
+                      <td style={{ width: "48px", textAlign: "center", color: "#a1a1aa", fontFamily: "monospace", fontSize: "11px", borderRight: "1px solid rgba(30, 26, 22,0.06)", backgroundColor: "rgba(255, 255, 255, 0.3)" }}>
                         {rowIdx + 1}
                       </td>
                       {row.map((cell, cellIdx) => (
