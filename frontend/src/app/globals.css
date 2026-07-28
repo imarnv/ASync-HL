@@ -76,17 +76,17 @@ h1, h2, h3, .serif-text {
 .mobile-topbar-brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   font-family: 'Outfit', sans-serif;
-  font-size: 1.35rem;
-  font-weight: 300;
-  color: var(--accent-dark);
-  letter-spacing: 0.5px;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #1e1a16;
+  letter-spacing: -0.02em;
 }
 
 .mobile-topbar-logo {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -148,6 +148,59 @@ h1, h2, h3, .serif-text {
   padding: 24px;
   box-sizing: border-box;
   z-index: 50;
+}
+
+.sidebar-brand-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  margin: 0 0 28px;
+  cursor: pointer;
+}
+
+.sidebar-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-left: -4px;
+}
+
+.sidebar-brand-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+}
+
+.sidebar-brand-wordmark {
+  position: relative;
+  display: inline-block;
+  padding: 0 34px 10px 0;
+  line-height: 1;
+}
+
+.sidebar-brand-text {
+  display: block;
+  font-family: 'Outfit', sans-serif;
+  font-size: 30px;
+  font-weight: 500;
+  color: #1e1a16;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.sidebar-brand-flourish {
+  position: absolute;
+  left: -1px;
+  top: 3px;
+  width: 128px;
+  height: 38px;
+  overflow: visible;
+  pointer-events: none;
+  color: #50381f;
 }
 
 .sidebar-nav {
@@ -367,8 +420,31 @@ h1, h2, h3, .serif-text {
   .sidebar-brand-wrap {
     display: flex !important;
     justify-content: space-between !important;
-    align-items: flex-start !important;
+    align-items: center !important;
     padding-right: 0 !important;
+  }
+
+  .sidebar-brand-lockup {
+    gap: 8px;
+    margin-left: -2px;
+  }
+
+  .sidebar-brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sidebar-brand-text {
+    font-size: 26px;
+  }
+
+  .sidebar-brand-flourish {
+    width: 112px;
+    height: 34px;
+  }
+
+  .sidebar-brand-wordmark {
+    padding-right: 28px;
   }
 
   .main-area {

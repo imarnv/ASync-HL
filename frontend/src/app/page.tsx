@@ -92,10 +92,10 @@ export default function Page() {
           </button>
           <span className="mobile-topbar-brand">
             <img
-              src="/heuristic-labs-logo.png"
-              alt="Heuristic Labs"
-              width={28}
-              height={28}
+              src="/heuristic-labs-mark.png"
+              alt=""
+              width={24}
+              height={24}
               className="mobile-topbar-logo"
             />
             async

@@ -84,67 +84,46 @@ export default function Sidebar({
   return (
     <div className={`sidebar-layout select-none ${isOpen ? "is-open" : ""}`}>
       <div
-        className="sidebar-brand-wrap relative cursor-pointer"
+        className="sidebar-brand-wrap"
         onClick={() => goTo("home")}
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          width: "100%",
-          marginBottom: "36px",
-          marginTop: "8px",
-          gap: "10px",
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") goTo("home");
         }}
       >
-        <img
-          src="/heuristic-labs-logo.png"
-          alt="Heuristic Labs"
-          width={40}
-          height={40}
-          style={{
-            width: 40,
-            height: 40,
-            objectFit: "contain",
-            flexShrink: 0,
-          }}
-        />
-        <div style={{ position: "relative", display: "inline-block", paddingBottom: "10px", paddingRight: "48px" }}>
-          <span
-            style={{
-              fontSize: "36px",
-              fontWeight: 300,
-              color: "#1e1a16",
-              fontFamily: "'Outfit', sans-serif",
-              letterSpacing: "0.5px",
-              lineHeight: "1",
-              display: "block",
-            }}
-          >
-            async
-          </span>
-
-          <svg
-            width="155"
-            height="44"
-            viewBox="0 0 155 44"
-            fill="none"
-            style={{ position: "absolute", left: "-2px", top: "4px", overflow: "visible", pointerEvents: "none" }}
-          >
-            <path
-              d="M 2 38 L 94 38 C 102 38 106 36 108 28 C 110 18 108 8 118 8 L 148 8"
-              stroke="#50381f"
-              strokeWidth="3.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M 141 3 L 149 8 L 141 13"
-              stroke="#50381f"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+        <div className="sidebar-brand-lockup">
+          <img
+            src="/heuristic-labs-mark.png"
+            alt=""
+            className="sidebar-brand-logo"
+            width={42}
+            height={42}
+          />
+          <div className="sidebar-brand-wordmark">
+            <span className="sidebar-brand-text">async</span>
+            <svg
+              className="sidebar-brand-flourish"
+              viewBox="0 0 120 36"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M 2 30 L 72 30 C 80 30 84 28 86 22 C 88 14 86 6 94 6 L 112 6"
+                stroke="currentColor"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 106 2 L 113 6 L 106 10"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
         </div>
 
         <button
